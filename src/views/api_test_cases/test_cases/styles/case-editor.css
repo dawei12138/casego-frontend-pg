@@ -1,0 +1,79 @@
+/* CaseEditor组件样式 */
+.case-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--el-bg-color);
+  min-height: 0; /* 确保 flex 容器可以正确收缩 */
+  overflow: hidden; /* 防止整体溢出 */
+}
+
+.loading-container,
+.empty-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--el-text-color-regular);
+}
+
+.loading-container .el-icon,
+.empty-container .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-text {
+  font-size: 16px;
+  margin: 0;
+}
+
+.editor-container {
+  flex: 1;
+  height: 100%;
+  overflow: auto; /* 允许编辑器区域滚动 */
+  background-color: var(--el-bg-color);
+  min-height: 0; /* 确保在 flex 容器中可以正确滚动 */
+}
+
+.drawer-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100%;
+  padding-right: 16px;
+  flex-wrap: nowrap !important;
+}
+
+.drawer-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--el-text-color-primary);
+  flex-shrink: 0;
+}
+
+.drawer-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* 确保 Element Plus 抽屉的body区域有正确的高度和定位 */
+.el-drawer__body {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* 为子组件的绝对定位提供参照 */
+}
+
+/* 历史记录抽屉特定样式 - 确保内容区域可以正确计算高度 */
+.history-drawer .el-drawer__body {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}

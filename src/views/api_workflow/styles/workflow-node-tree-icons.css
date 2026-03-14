@@ -1,0 +1,167 @@
+/* ==================== 节点类型样式 - 简洁统一风格 ==================== */
+
+.node-type-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  transition: all 0.15s ease;
+}
+
+.node-type-section.clickable {
+  cursor: pointer;
+}
+
+.node-type-section.clickable:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.node-type-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.node-type-icon.clickable {
+  cursor: pointer;
+}
+
+/* ==================== 统一柔和色调 - 灰蓝色系 ==================== */
+
+/* 分组节点 - 蓝灰色 */
+.node-type-icon.icon-group {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* 任务节点 - 蓝灰色 */
+.node-type-icon.icon-task {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ==================== 任务子类型图标样式 - 统一风格 ==================== */
+
+/* 等待任务 - 灰色 */
+.task-wait-icon {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+/* 自定义脚本 - 深灰 */
+.task-custom-icon {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* 公共脚本 - 深灰 */
+.task-public_script-icon {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* 数据库操作 - 深灰 */
+.task-db_operation-icon {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* Web用例 - 深灰 */
+.task-web_case-icon {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* API用例和API接口 - 深灰 */
+.task-api-icon,
+.task-api_case-icon {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+}
+
+/* ==================== 控制流节点样式 - 轻微区分 ==================== */
+
+/* 条件节点 - 淡橙 */
+.node-type-icon.icon-condition {
+  background: #fef3e2;
+  color: #9a7b4f;
+}
+
+/* 循环节点 - 淡蓝 */
+.node-type-icon.icon-loop {
+  background: #eff6ff;
+  color: #6b7f99;
+}
+
+/* For循环 - 淡蓝 */
+.node-type-icon.icon-for {
+  background: #eff6ff;
+  color: #6b7f99;
+}
+
+/* ForEach遍历 - 淡青 */
+.node-type-icon.icon-foreach {
+  background: #f0fdfa;
+  color: #5f8a84;
+}
+
+/* IF条件 - 淡粉 */
+.node-type-icon.icon-if {
+  background: #fef2f2;
+  color: #9b7676;
+}
+
+/* ELSE分支 - 淡黄 */
+.node-type-icon.icon-else {
+  background: #fffbeb;
+  color: #9a8a4f;
+}
+
+/* ==================== 节点类型文本 - 统一灰色 ==================== */
+
+.node-type-text {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.node-type-text.if-text {
+  color: #94a3b8;
+}
+
+.node-type-text.else-text {
+  color: #94a3b8;
+}
+
+.node-type-text.for-text {
+  color: #94a3b8;
+}
+
+.node-type-text.foreach-text {
+  color: #94a3b8;
+}
+
+.node-type-text.task-subtype-text {
+  color: #94a3b8;
+}
+
+/* ==================== 悬停效果 - 轻微 ==================== */
+
+.node-type-section:hover .node-type-icon {
+  transform: scale(1.02);
+}
+
+.node-type-icon:hover {
+  filter: brightness(0.97);
+}

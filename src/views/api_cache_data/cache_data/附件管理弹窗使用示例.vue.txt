@@ -1,0 +1,206 @@
+<template>
+  <div class="parent-component">
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>附件管理示例</span>
+        </div>
+      </template>
+      
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-button type="primary" @click="openSingleFileDialog">
+            选择单个文件
+          </el-button>
+        </el-col>
+        <el-col :span="12">
+          <el-button type="success" @click="openMultipleFileDialog">
+            选择多个文件
+          </el-button>
+        </el-col>
+      </el-row>
+
+      <!-- 显示选中的文件 -->
+      <el-divider content-position="left">已选择的文件</el-divider>
+      
+      <div v-if="selectedFiles.length === 0" class="empty-state">
+        <el-empty description="暂未选择任何文件" />
+      </div>
+      
+      <el-table v-else :data="selectedFiles" stripe>
+        <el-table-column prop="fileId" label="文件ID" width="80" />
+        <el-table-column prop="originalName" label="原始名称" show-overflow-tooltip />
+        <el-table-column prop="storedName" label="存储名称" show-overflow-tooltip />
+        <el-table-column prop="mimeType" label="文件类型" width="150">
+          <template #default="{ row }">
+            <el-tag size="small">{{ row.mimeType || '未知' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="fileSize" label="文件大小" width="100">
+          <template #default="{ row }">
+            {{ formatFileSize(row.fileSize) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100">
+          <template #default="{ row, $index }">
+            <el-button 
+              link 
+              type="danger" 
+              size="small" 
+              @click="removeFile($index)"
+            >
+              移除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 操作按钮 -->
+      <el-divider />
+      <el-row justify="end">
+        <el-button @click="clearSelectedFiles">清空</el-button>
+        <el-button type="primary" :disabled="selectedFiles.length === 0" @click="handleSubmit">
+          提交 ({{ selectedFiles.length }})
+        </el-button>
+      </el-row>
+    </el-card>
+
+    <!-- 附件管理对话框 -->
+    <FileManagerDialog
+      v-model="fileDialogVisible"
+      :allow-multiple="allowMultipleFiles"
+      @save="handleFileSelect"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import FileManagerDialog from './FileManagerDialog.vue'
+
+// 响应式数据
+const fileDialogVisible = ref(false)
+const allowMultipleFiles = ref(true)
+const selectedFiles = ref([])
+
+/**
+ * 打开单文件选择对话框
+ */
+const openSingleFileDialog = () => {
+  allowMultipleFiles.value = false
+  fileDialogVisible.value = true
+}
+
+/**
+ * 打开多文件选择对话框
+ */
+const openMultipleFileDialog = () => {
+  allowMultipleFiles.value = true
+  fileDialogVisible.value = true
+}
+
+/**
+ * 处理文件选择
+ * @param {Object|Array} files - 选择的文件（单选时为对象，多选时为数组）
+ */
+const handleFileSelect = (files) => {
+  console.log('选择的文件:', files)
+  
+  if (allowMultipleFiles.value) {
+    // 多选模式：合并到已选文件列表中（去重）
+    const newFiles = Array.isArray(files) ? files : [files]
+    newFiles.forEach(file => {
+      const exists = selectedFiles.value.some(selected => selected.fileId === file.fileId)
+      if (!exists) {
+        selectedFiles.value.push(file)
+      }
+    })
+    ElMessage.success(`成功添加 ${newFiles.length} 个文件`)
+  } else {
+    // 单选模式：替换当前选择
+    selectedFiles.value = [files]
+    ElMessage.success('文件选择成功')
+  }
+}
+
+/**
+ * 移除指定文件
+ * @param {number} index - 文件在列表中的索引
+ */
+const removeFile = (index) => {
+  const removedFile = selectedFiles.value.splice(index, 1)[0]
+  ElMessage.info(`已移除文件: ${removedFile.originalName}`)
+}
+
+/**
+ * 清空选中的文件
+ */
+const clearSelectedFiles = () => {
+  selectedFiles.value = []
+  ElMessage.info('已清空选中的文件')
+}
+
+/**
+ * 提交选中的文件
+ */
+const handleSubmit = () => {
+  if (selectedFiles.value.length === 0) {
+    ElMessage.warning('请先选择文件')
+    return
+  }
+  
+  // 这里可以调用API提交文件信息
+  console.log('提交的文件信息:', selectedFiles.value.map(file => ({
+    fileId: file.fileId,
+    originalName: file.originalName,
+    storedName: file.storedName
+  })))
+  
+  ElMessage.success(`成功提交 ${selectedFiles.value.length} 个文件`)
+  
+  // 可以在这里调用API
+  // await submitFiles(selectedFiles.value)
+}
+
+/**
+ * 格式化文件大小
+ * @param {number} size - 文件大小（字节）
+ * @returns {string} 格式化后的文件大小
+ */
+const formatFileSize = (size) => {
+  if (!size) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let index = 0
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024
+    index++
+  }
+  return Math.round(size * 100) / 100 + ' ' + units[index]
+}
+</script>
+
+<style scoped>
+.parent-component {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 20px;
+}
+
+.el-divider {
+  margin: 20px 0;
+}
+
+.el-table {
+  margin-top: 16px;
+}
+</style>

@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nul)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(rm:*)",
+      "Bash(timeout 15 tail:*)",
+      "Bash(timeout 30 tail:*)",
+      "Skill(xlsx)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(npm show:*)",
+      "Bash(timeout 5 echo:*)",
+      "WebFetch(domain:demo.1592653.xyz)",
+      "Bash(timeout:*)",
+      "Bash(findstr:*)",
+      "Skill(frontend-design)",
+      "WebSearch",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(xargs grep:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npx:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "spinnerTipsEnabled": true
+}

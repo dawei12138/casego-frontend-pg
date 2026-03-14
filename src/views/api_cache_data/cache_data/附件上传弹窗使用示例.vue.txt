@@ -1,0 +1,151 @@
+<template>
+  <div class="upload-examples">
+    <el-card header="重构后的文件上传组件示例" style="margin-bottom: 20px;">
+      
+      <el-alert 
+        title="重构说明" 
+        type="success" 
+        :closable="false"
+        style="margin-bottom: 20px;"
+      >
+        <ul>
+          <li>✅ 使用稳定的 el-upload 组件，支持拖拽上传</li>
+          <li>✅ 简化了文件对象处理，避免响应式包装问题</li>
+          <li>✅ 保持批量上传能力，一次请求上传所有文件</li>
+          <li>✅ 增加上传进度显示和状态管理</li>
+          <li>✅ 更好的用户体验和错误处理</li>
+        </ul>
+      </el-alert>
+      
+      <!-- 示例1: 批量上传任意文件 -->
+      <el-divider content-position="left">示例1: 批量上传任意文件</el-divider>
+      <el-button type="primary" @click="showBatchUpload">批量上传附件</el-button>
+      
+      <!-- 示例2: 单文件上传图片 -->
+      <el-divider content-position="left">示例2: 单文件上传图片</el-divider>
+      <el-button type="success" @click="showImageUpload">上传头像</el-button>
+      
+      <!-- 示例3: 上传文档类文件 -->
+      <el-divider content-position="left">示例3: 上传文档类文件</el-divider>
+      <el-button type="warning" @click="showDocumentUpload">上传文档</el-button>
+
+    </el-card>
+
+    <!-- 批量上传弹窗 -->
+    <FileUploadDialog
+      v-model="batchUploadVisible"
+      title="批量上传附件"
+      :multiple="true"
+      :max-size="100"
+      :max-count="50"
+      accept="*/*"
+      :upload-api="uploadFiles"
+      @upload-success="handleBatchUploadSuccess"
+      @upload-error="handleUploadError"
+    />
+
+    <!-- 图片上传弹窗 -->
+    <FileUploadDialog
+      v-model="imageUploadVisible"
+      title="上传头像"
+      :multiple="false"
+      :max-size="5"
+      :max-count="1"
+      accept="image/*"
+      accept-text="JPG, PNG, GIF"
+      file-field-name="avatarfile"
+      :upload-api="uploadAvatar"
+      @upload-success="handleImageUploadSuccess"
+      @upload-error="handleUploadError"
+    />
+
+    <!-- 文档上传弹窗 -->
+    <FileUploadDialog
+      v-model="documentUploadVisible"
+      title="上传文档"
+      :multiple="false"
+      :max-size="20"
+      :max-count="10"
+      :upload-api="uploadFiles"
+      @upload-success="handleDocumentUploadSuccess"
+      @upload-error="handleUploadError"
+    />
+  </div>
+</template>
+
+<script setup>
+import { uploadFiles, uploadAvatar } from "@/api/system/file";
+import FileUploadDialog from "@/components/FileUpload/FileUploadDialog.vue";
+import { ElMessage } from 'element-plus'
+const { proxy } = getCurrentInstance();
+
+// 控制各个弹窗显示
+const batchUploadVisible = ref(false);
+const imageUploadVisible = ref(false);
+const documentUploadVisible = ref(false);
+
+/** 显示批量上传弹窗 */
+function showBatchUpload() {
+  batchUploadVisible.value = true;
+}
+
+/** 显示图片上传弹窗 */
+function showImageUpload() {
+  imageUploadVisible.value = true;
+}
+
+/** 显示文档上传弹窗 */
+function showDocumentUpload() {
+  documentUploadVisible.value = true;
+}
+
+/** 批量上传成功处理 */
+function handleBatchUploadSuccess(successFiles) {
+  ElMessage.success(`批量上传成功！共上传 ${successFiles.length} 个文件`);
+  console.log('批量上传成功:', successFiles);
+  // 刷新页面数据或其他业务逻辑
+}
+
+/** 图片上传成功处理 */
+function handleImageUploadSuccess(successFiles) {
+  ElMessage.success('头像上传成功！');
+  const imageResponse = successFiles[0].response;
+  console.log('头像上传响应:', imageResponse);
+  // 更新用户头像显示
+}
+
+/** 文档上传成功处理 */
+function handleDocumentUploadSuccess(successFiles) {
+  ElMessage.success(`文档上传成功！共上传 ${successFiles.length} 个文档`);
+  console.log('文档上传成功:', successFiles);
+  // 刷新文档列表或其他业务逻辑
+}
+
+/** 上传错误处理 */
+function handleUploadError(errorFiles) {
+  errorFiles.forEach(({ fileItem, error }) => {
+    ElMessage.error(`文件 ${fileItem.name} 上传失败: ${error.message || '未知错误'}`);
+  });
+  console.error('上传失败:', errorFiles);
+}
+</script>
+
+<style scoped>
+.upload-examples {
+  padding: 20px;
+}
+
+.el-button {
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+li {
+  margin: 5px 0;
+}
+</style>

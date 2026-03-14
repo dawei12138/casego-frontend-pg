@@ -1,0 +1,239 @@
+/* ==================== WorkflowNodeTree 主样式 ==================== */
+
+.workflow-node-tree {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--el-bg-color-page);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ==================== 统一顶部栏样式 ==================== */
+
+.unified-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+  flex-shrink: 0;
+  min-height: 48px;
+  gap: 16px;
+}
+
+.header-left-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.header-left-section .title-icon {
+  font-size: 18px;
+  color: #007aff;
+}
+
+.header-left-section .toolbar-title {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.header-left-section .toolbar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.header-left-section .toolbar-button-group {
+  border-radius: 6px;
+}
+
+.header-left-section .toolbar-button-group .el-button {
+  border-radius: 0;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.header-left-section .toolbar-button-group .el-button:hover {
+  background: var(--el-fill-color-light);
+}
+
+.header-left-section .toolbar-button-group .el-button:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.header-left-section .toolbar-button-group .el-button:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.header-right-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.header-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--el-border-color);
+  flex-shrink: 0;
+}
+
+.header-right-section .detail-node-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.header-right-section .detail-node-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.header-right-section .el-tag {
+  flex-shrink: 0;
+}
+
+.close-detail-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+}
+
+.tree-main-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tree-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  min-height: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tree-panel.with-detail {
+  flex: 0 0 auto;
+  width: 380px;
+  min-width: 280px;
+  max-width: 450px;
+}
+
+/* 树容器 - 独立滚动 */
+.tree-container {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: 6px;
+  background: var(--el-bg-color);
+  transition: opacity 0.15s ease;
+}
+
+/* 刷新状态 - 轻微半透明效果 */
+.tree-container.is-refreshing {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ==================== 详情面板样式 ==================== */
+
+.detail-panel {
+  position: relative;
+  background: var(--el-bg-color);
+  border-left: 1px solid var(--el-border-color);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 400px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 节点图标颜色 - Apple 风格配色 */
+.detail-node-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.detail-node-icon.icon-group {
+  color: #007aff;
+}
+
+.detail-node-icon.icon-task {
+  color: #5856d6;
+}
+
+.detail-node-icon.icon-if {
+  color: #ff3b30;
+}
+
+.detail-node-icon.icon-else {
+  color: #ff9500;
+}
+
+.detail-node-icon.icon-for,
+.detail-node-icon.icon-foreach {
+  color: #34c759;
+}
+
+/* 详情内容区域 - 独立滚动 */
+.detail-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 拖拽调节手柄 - Apple 风格 */
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.resize-handle:hover {
+  background: rgba(0, 122, 255, 0.05);
+}
+
+.resize-handle:hover .resize-line {
+  background: #007aff;
+  opacity: 1;
+  height: 60px;
+  width: 3px;
+}
+
+.resize-line {
+  width: 2px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}

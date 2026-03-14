@@ -1,0 +1,52 @@
+/* ==================== 响应式设计 ==================== */
+
+@media (max-width: 768px) {
+  .tree-main-content {
+    flex-direction: column;
+  }
+
+  .tree-panel {
+    min-width: auto;
+  }
+
+  .tree-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .toolbar-left {
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .toolbar-right {
+    flex-shrink: 0;
+  }
+
+  .search-container {
+    padding: 6px 10px;
+  }
+
+  .node-content {
+    padding: 4px 6px;
+  }
+
+  .node-name {
+    font-size: 11px;
+  }
+
+  .node-meta {
+    gap: 3px;
+  }
+
+  .node-config-preview {
+    padding: 6px;
+  }
+
+  .tree-statistics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
