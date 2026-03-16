@@ -23,7 +23,8 @@
       "Bash(xargs grep:*)",
       "Bash(npx vite:*)",
       "Bash(npx vue-tsc:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(find D:\\\\code\\\\project\\\\casaego-pg-github\\\\casego-frontend-pg\\\\src\\\\views:*)"
     ],
     "deny": [],
     "ask": []
