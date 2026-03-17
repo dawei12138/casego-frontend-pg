@@ -876,6 +876,110 @@
   stroke: #3b82f6;
 }
 
+/* MCP Tool Pill */
+.mcp-tool-pill:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+.mcp-tool-pill.active {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+.mcp-tool-pill.active svg {
+  stroke: #f59e0b;
+}
+.mcp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mcp-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mcp-popover-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--header-border, #e5e7eb);
+}
+.mcp-popover-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  justify-content: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+.mcp-popover-empty {
+  padding: 12px 0;
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+.mcp-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.mcp-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mcp-popover-item:hover {
+  background: var(--msg-user-bg, rgba(0, 0, 0, 0.03));
+}
+.mcp-item-name {
+  font-size: 13px;
+  color: var(--text-primary, #1f2937);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-popover-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--header-border, #e5e7eb);
+}
+.mcp-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.mcp-clear-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
 .input-action-btn {
   display: flex;
   align-items: center;

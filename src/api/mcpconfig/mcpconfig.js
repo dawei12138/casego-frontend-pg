@@ -42,3 +42,11 @@ export function delMcpconfig(configId) {
     method: 'delete'
   })
 }
+
+// 查询所有MCP服务器配置（简要列表）
+export function allMcpconfig() {
+  return request({
+    url: '/mcpconfig/mcpconfig/all',
+    method: 'get'
+  })
+}

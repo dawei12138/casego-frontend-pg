@@ -504,6 +504,50 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                   <span>联网搜索</span>
                 </button>
+                <el-popover
+                  v-model:visible="mcpPopoverVisible"
+                  placement="top-start"
+                  :width="280"
+                  trigger="click"
+                  popper-style="padding: 12px;"
+                  @show="fetchMcpConfigs"
+                >
+                  <template #reference>
+                    <button
+                      class="thinking-pill mcp-tool-pill"
+                      :class="{ active: selectedMcpConfigIds.length > 0 }"
+                      title="MCP 工具"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                      <span>MCP工具</span>
+                      <span v-if="selectedMcpConfigIds.length > 0" class="mcp-badge">{{ selectedMcpConfigIds.length }}</span>
+                    </button>
+                  </template>
+                  <div class="mcp-popover">
+                    <div class="mcp-popover-title">选择 MCP 工具</div>
+                    <div v-if="mcpLoading" class="mcp-popover-loading">
+                      <div class="loading-spinner small"></div>
+                      <span>加载中...</span>
+                    </div>
+                    <div v-else-if="mcpConfigList.length === 0" class="mcp-popover-empty">暂无可用的 MCP 工具</div>
+                    <div v-else class="mcp-popover-list">
+                      <label
+                        v-for="item in mcpConfigList"
+                        :key="item.configId"
+                        class="mcp-popover-item"
+                      >
+                        <el-checkbox
+                          :model-value="selectedMcpConfigIds.includes(item.configId)"
+                          @change="(val) => toggleMcpConfig(item.configId, val)"
+                        />
+                        <span class="mcp-item-name">{{ item.serverName }}</span>
+                      </label>
+                    </div>
+                    <div v-if="mcpConfigList.length > 0" class="mcp-popover-footer">
+                      <button class="mcp-clear-btn" @click="selectedMcpConfigIds = []">清除选择</button>
+                    </div>
+                  </div>
+                </el-popover>
               </div>
               <div class="input-actions">
                 <button
@@ -610,6 +654,7 @@ import 'highlight.js/styles/github-dark-dimmed.css'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 import { stopChatSession, uploadChatAttachments, fetchAttachmentBlob } from '@/api/chat/agent'
+import { allMcpconfig } from '@/api/mcpconfig/mcpconfig'
 import { ElMessage } from 'element-plus'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import useUserStore from '@/store/modules/user'
@@ -800,6 +845,10 @@ const selectedModel = ref('gpt-5.2')
 const modelPopoverVisible = ref(false)
 const enableThinking = ref(false)
 const enableWebSearch = ref(false)
+const mcpPopoverVisible = ref(false)
+const mcpConfigList = ref([])
+const selectedMcpConfigIds = ref([])
+const mcpLoading = ref(false)
 const inputMessage = ref('')
 const isStreaming = ref(false)
 const conversations = ref([])
@@ -1368,6 +1417,32 @@ const loadAttachmentImagesForMessages = (messages) => {
   }
 }
 
+// ===================== MCP Config =====================
+
+const fetchMcpConfigs = async () => {
+  if (mcpLoading.value) return
+  mcpLoading.value = true
+  try {
+    const res = await allMcpconfig()
+    mcpConfigList.value = res.data || []
+  } catch (e) {
+    console.error('Failed to fetch MCP configs:', e)
+    mcpConfigList.value = []
+  } finally {
+    mcpLoading.value = false
+  }
+}
+
+const toggleMcpConfig = (configId, checked) => {
+  if (checked) {
+    if (!selectedMcpConfigIds.value.includes(configId)) {
+      selectedMcpConfigIds.value.push(configId)
+    }
+  } else {
+    selectedMcpConfigIds.value = selectedMcpConfigIds.value.filter(id => id !== configId)
+  }
+}
+
 // ===================== Send Message =====================
 
 const sendMessage = async () => {
@@ -1445,7 +1520,8 @@ const sendMessage = async () => {
         message: text,
         attachments: attachments,
         enableThinking: enableThinking.value,
-        enableWebSearch: enableWebSearch.value
+        enableWebSearch: enableWebSearch.value,
+        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {})
       }),
       signal: abortController.signal
     })
@@ -1966,7 +2042,8 @@ const submitAnswer = async (askUserMsg) => {
         threadId: askUserMsg.threadId,
         answers,
         enableThinking: enableThinking.value,
-        enableWebSearch: enableWebSearch.value
+        enableWebSearch: enableWebSearch.value,
+        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {})
       }),
       signal: abortController.signal
     })
