@@ -834,7 +834,22 @@ const getToolStreamCounter = (msg) => {
 // ===================== Store =====================
 
 const userStore = useUserStore()
-const userAvatar = computed(() => userStore.avatar)
+// 缓存用户头像为 blob URL，避免每条消息都重新请求服务器
+const cachedUserAvatar = ref('')
+const userAvatar = computed(() => cachedUserAvatar.value || userStore.avatar)
+
+const cacheUserAvatar = async () => {
+  const url = userStore.avatar
+  if (!url) return
+  try {
+    const resp = await fetch(url)
+    if (!resp.ok) return
+    const blob = await resp.blob()
+    cachedUserAvatar.value = URL.createObjectURL(blob)
+  } catch {
+    // 缓存失败时回退到原始 URL
+  }
+}
 
 // ===================== State =====================
 
@@ -2321,12 +2336,17 @@ watch(selectedProvider, (val) => {
 // ===================== Lifecycle =====================
 
 onMounted(() => {
+  cacheUserAvatar()
   loadConversations()
 })
 
 onUnmounted(() => {
   if (abortController) abortController.abort()
   clearTimeout(highlightTimer)
+  // 释放头像 blob URL
+  if (cachedUserAvatar.value) {
+    URL.revokeObjectURL(cachedUserAvatar.value)
+  }
 })
 </script>
 
