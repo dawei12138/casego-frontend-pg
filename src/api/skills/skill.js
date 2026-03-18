@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 查询AI技能配置列表
+// 查询AI技能列表（分页）
 export function listSkill(query) {
   return request({
     url: '/skills/skill/list',
@@ -9,7 +9,16 @@ export function listSkill(query) {
   })
 }
 
-// 查询AI技能配置详细
+// 查询AI技能列表（全量/下拉）
+export function listAllSkill(query) {
+  return request({
+    url: '/skills/skill/all',
+    method: 'get',
+    params: query
+  })
+}
+
+// 查询AI技能详情
 export function getSkill(skillId) {
   return request({
     url: '/skills/skill/' + skillId,
@@ -17,7 +26,7 @@ export function getSkill(skillId) {
   })
 }
 
-// 新增AI技能配置
+// 新增AI技能
 export function addSkill(data) {
   return request({
     url: '/skills/skill',
@@ -26,7 +35,7 @@ export function addSkill(data) {
   })
 }
 
-// 修改AI技能配置
+// 修改AI技能
 export function updateSkill(data) {
   return request({
     url: '/skills/skill',
@@ -35,10 +44,72 @@ export function updateSkill(data) {
   })
 }
 
-// 删除AI技能配置
-export function delSkill(skillId) {
+// 删除AI技能（批量）
+export function delSkill(skillIds) {
   return request({
-    url: '/skills/skill/' + skillId,
+    url: '/skills/skill/' + skillIds,
+    method: 'delete'
+  })
+}
+
+// 上传技能包（ZIP）
+export function uploadSkill(formData) {
+  return request({
+    url: '/skills/skill/upload',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+// URL导入技能
+export function importUrlSkill(data) {
+  return request({
+    url: '/skills/skill/import-url',
+    method: 'post',
+    data: data
+  })
+}
+
+// 获取技能文件列表
+export function listSkillFiles(skillId) {
+  return request({
+    url: '/skills/skill/' + skillId + '/files',
+    method: 'get'
+  })
+}
+
+// 获取技能文件内容
+export function getSkillFileContent(skillId, filePath) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file',
+    method: 'get',
+    params: { filePath }
+  })
+}
+
+// 新增技能文件
+export function addSkillFile(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file',
+    method: 'post',
+    data: data
+  })
+}
+
+// 编辑技能文件
+export function updateSkillFile(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file',
+    method: 'put',
+    data: data
+  })
+}
+
+// 删除技能文件
+export function delSkillFile(skillId, fileId) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file/' + fileId,
     method: 'delete'
   })
 }
