@@ -52,24 +52,48 @@
           <span>暂无文件</span>
         </div>
 
-        <div v-else class="file-tree">
-          <div
-            v-for="node in fileTree"
-            :key="node.path"
-            class="tree-node-wrap"
-          >
-            <tree-node
-              :node="node"
-              :depth="0"
-              :selected-path="selectedPath"
-              @select="handleSelectFile"
-              @delete="handleDeleteNode"
-              @toggle="handleToggleFolder"
-              @preview="openPreview"
-              @download="handleDownloadTreeFile"
-            />
+        <template v-else>
+          <!-- Column Header Bar -->
+          <div class="ws-column-header">
+            <div class="ws-col ws-col-name" :class="{ sorted: sortKey === 'name' }" @click="toggleSort('name')">
+              <span>名称</span>
+              <svg v-if="sortKey === 'name'" class="ws-sort-arrow" :class="{ desc: sortOrder === 'desc' }" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="ws-col ws-col-size" :class="{ sorted: sortKey === 'size' }" @click="toggleSort('size')">
+              <span>大小</span>
+              <svg v-if="sortKey === 'size'" class="ws-sort-arrow" :class="{ desc: sortOrder === 'desc' }" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="ws-col ws-col-time" :class="{ sorted: sortKey === 'modifiedTime' }" @click="toggleSort('modifiedTime')">
+              <span>修改时间</span>
+              <svg v-if="sortKey === 'modifiedTime'" class="ws-sort-arrow" :class="{ desc: sortOrder === 'desc' }" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="ws-col ws-col-type" :class="{ sorted: sortKey === 'type' }" @click="toggleSort('type')">
+              <span>类型</span>
+              <svg v-if="sortKey === 'type'" class="ws-sort-arrow" :class="{ desc: sortOrder === 'desc' }" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
           </div>
-        </div>
+
+          <!-- File List -->
+          <div class="file-tree">
+            <div
+              v-for="node in sortedFileTree"
+              :key="node.path"
+              class="tree-node-wrap"
+            >
+              <tree-node
+                :node="node"
+                :depth="0"
+                :selected-path="selectedPath"
+                :sort-key="sortKey"
+                @select="handleSelectFile"
+                @delete="handleDeleteNode"
+                @toggle="handleToggleFolder"
+                @preview="openPreview"
+                @download="handleDownloadTreeFile"
+              />
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -245,10 +269,44 @@ const TreeNode = defineComponent({
   props: {
     node: { type: Object, required: true },
     depth: { type: Number, default: 0 },
-    selectedPath: { type: String, default: null }
+    selectedPath: { type: String, default: null },
+    sortKey: { type: String, default: 'modifiedTime' }
   },
   emits: ['select', 'delete', 'toggle', 'preview', 'download'],
   setup(props, { emit }) {
+    const formatSize = (bytes) => {
+      if (bytes == null) return '-'
+      if (bytes < 1024) return bytes + ' B'
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+    }
+    const formatTime = (ts) => {
+      if (!ts) return '-'
+      try {
+        const d = new Date(ts)
+        if (isNaN(d.getTime())) return '-'
+        const pad = (n) => String(n).padStart(2, '0')
+        return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+      } catch { return '-' }
+    }
+    const getFileType = (node) => {
+      if (node.type === 'directory') return '文件夹'
+      if (node.mimeType) {
+        const short = node.mimeType.split('/').pop()
+        if (short === 'x-python' || short === 'python') return 'Python'
+        if (short === 'javascript') return 'JavaScript'
+        if (short === 'typescript') return 'TypeScript'
+        if (short === 'json') return 'JSON'
+        if (short === 'html') return 'HTML'
+        if (short === 'css') return 'CSS'
+        if (short === 'plain') return '文本'
+        if (short === 'markdown') return 'Markdown'
+        return short
+      }
+      const dotIdx = node.name.lastIndexOf('.')
+      if (dotIdx === -1) return '文件'
+      return node.name.slice(dotIdx + 1).toUpperCase()
+    }
     return () => {
       const isDir = props.node.type === 'directory'
       const isSelected = props.selectedPath === props.node.path
@@ -349,13 +407,25 @@ const TreeNode = defineComponent({
 
       const actionsWrap = h('span', { class: 'tree-actions' }, actionBtns)
 
+      // Metadata columns for files
+      const metaCols = []
+      if (!isDir) {
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-size' }, formatSize(props.node.size)))
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-time' }, formatTime(props.node.modifiedTime)))
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-type' }, getFileType(props.node)))
+      } else {
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-size' }, '-'))
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-time' }, formatTime(props.node.modifiedTime)))
+        metaCols.push(h('span', { class: 'tree-meta tree-meta-type' }, '文件夹'))
+      }
+
       const nodeEl = h('div', {
         class: ['tree-node', { selected: isSelected, directory: isDir }],
         onClick: () => {
           if (isDir) emit('toggle', props.node)
           else emit('select', props.node)
         }
-      }, [...guides, chevron, icon, h('span', { class: 'tree-name' }, props.node.name), actionsWrap])
+      }, [...guides, chevron, icon, h('span', { class: 'tree-name' }, props.node.name), ...metaCols, actionsWrap])
 
       const children = isDir && props.node.expanded && props.node.children?.length
         ? props.node.children.map(child =>
@@ -364,6 +434,7 @@ const TreeNode = defineComponent({
               node: child,
               depth: props.depth + 1,
               selectedPath: props.selectedPath,
+              sortKey: props.sortKey,
               onSelect: (n) => emit('select', n),
               onDelete: (n) => emit('delete', n),
               onToggle: (n) => emit('toggle', n),
@@ -383,6 +454,60 @@ const TreeNode = defineComponent({
 const loading = ref(false)
 const fileTree = ref([])
 const selectedPath = ref(null)
+const sortKey = ref('modifiedTime')
+const sortOrder = ref('asc') // asc = oldest first (newest at bottom), desc = newest first
+
+const toggleSort = (key) => {
+  if (sortKey.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortOrder.value = key === 'modifiedTime' ? 'asc' : 'asc'
+  }
+}
+
+const getFileExt = (name) => {
+  if (!name) return ''
+  const dotIdx = name.lastIndexOf('.')
+  if (dotIdx === -1) return ''
+  return name.slice(dotIdx + 1).toLowerCase()
+}
+
+const sortNodes = (nodes) => {
+  const sorted = [...nodes]
+  const dir = sortOrder.value === 'asc' ? 1 : -1
+  sorted.sort((a, b) => {
+    // Directories always first
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+    let cmp = 0
+    switch (sortKey.value) {
+      case 'name':
+        cmp = a.name.localeCompare(b.name)
+        break
+      case 'size':
+        cmp = (a.size || 0) - (b.size || 0)
+        break
+      case 'modifiedTime':
+        cmp = new Date(a.modifiedTime || 0).getTime() - new Date(b.modifiedTime || 0).getTime()
+        break
+      case 'type':
+        cmp = getFileExt(a.name).localeCompare(getFileExt(b.name))
+        break
+      default:
+        cmp = 0
+    }
+    return cmp * dir
+  })
+  // Recursively sort children
+  return sorted.map(node => {
+    if (node.type === 'directory' && node.children?.length) {
+      return { ...node, children: sortNodes(node.children) }
+    }
+    return node
+  })
+}
+
+const sortedFileTree = computed(() => sortNodes(fileTree.value))
 
 // Create File
 const createFileVisible = ref(false)
@@ -509,6 +634,10 @@ const buildFileTree = (files) => {
     if (item.type === 'directory') {
       dirMap.set(item.path, {
         ...item,
+        size: item.size || null,
+        mimeType: item.mimeType || null,
+        createdTime: item.createdTime || null,
+        modifiedTime: item.modifiedTime || null,
         children: [],
         expanded: true
       })
@@ -519,7 +648,13 @@ const buildFileTree = (files) => {
     const pathParts = item.path.split('/')
     const node = item.type === 'directory'
       ? dirMap.get(item.path)
-      : { ...item }
+      : {
+          ...item,
+          size: item.size || null,
+          mimeType: item.mimeType || null,
+          createdTime: item.createdTime || null,
+          modifiedTime: item.modifiedTime || null
+        }
 
     if (pathParts.length === 1) {
       root.push(node)

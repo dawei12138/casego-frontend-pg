@@ -403,6 +403,47 @@
   border-top: 1px solid #e8d5f5;
 }
 
+/* AI Message Footer: Copy + Timestamp */
+.ai-msg-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.ai-body:hover .ai-msg-footer {
+  opacity: 1;
+}
+
+.ai-msg-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #aeaeb2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ai-msg-copy-btn:hover {
+  background: #f0f0f3;
+  color: #1d1d1f;
+}
+.ai-msg-copy-btn:active {
+  transform: scale(0.92);
+}
+
+.ai-msg-timestamp {
+  font-size: 11px;
+  color: #aeaeb2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
 /* SSE Error Block */
 .sse-error-block {
   display: flex;

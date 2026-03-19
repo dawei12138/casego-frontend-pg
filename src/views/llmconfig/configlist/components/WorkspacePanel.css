@@ -117,7 +117,69 @@
 
 /* ==================== File Tree ==================== */
 .file-tree {
-  padding: 6px 0;
+  padding: 2px 0;
+}
+
+/* ==================== Column Header ==================== */
+.ws-column-header {
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 52px;
+  height: 28px;
+  border-bottom: 1px solid #e5e5ea;
+  background: #f8f9fa;
+  flex-shrink: 0;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.ws-col {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #86868b;
+  cursor: pointer;
+  padding: 0 4px;
+  height: 100%;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+.ws-col:hover {
+  color: #1d1d1f;
+}
+.ws-col.sorted {
+  color: #007aff;
+}
+
+.ws-col-name {
+  flex: 1;
+  min-width: 0;
+}
+.ws-col-size {
+  width: 56px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+.ws-col-time {
+  width: 90px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+.ws-col-type {
+  width: 64px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.ws-sort-arrow {
+  transition: transform 0.2s ease;
+}
+.ws-sort-arrow.desc {
+  transform: rotate(180deg);
 }
 
 .tree-node-container {}
@@ -214,6 +276,30 @@
   white-space: nowrap;
   min-width: 0;
   line-height: 1.4;
+}
+
+/* Tree metadata columns */
+:deep(.tree-meta) {
+  font-size: 11px;
+  color: #aeaeb2;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  padding: 0 4px;
+}
+:deep(.tree-meta-size) {
+  width: 56px;
+}
+:deep(.tree-meta-time) {
+  width: 90px;
+}
+:deep(.tree-meta-type) {
+  width: 64px;
+}
+
+/* Hide meta on hover when actions visible */
+:deep(.tree-node:hover .tree-meta) {
+  visibility: hidden;
 }
 
 /* Tree action buttons (hover reveal) */

@@ -203,6 +203,14 @@
                   class="ai-content chat-markdown-body"
                   v-html="renderMarkdown(msg.content)"
                 ></div>
+                <!-- Message Footer: Copy + Timestamp -->
+                <div v-if="msg.content && !msg.loading" class="ai-msg-footer">
+                  <button class="ai-msg-copy-btn" @click="copyMessageContent(msg)" :title="msg._copied ? '已复制' : '复制'">
+                    <svg v-if="!msg._copied" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <span v-if="msg.timestamp" class="ai-msg-timestamp">{{ formatMsgTime(msg.timestamp) }}</span>
+                </div>
                 <!-- Error Block -->
                 <div v-if="msg.errorMessage" class="sse-error-block">
                   <div class="sse-error-icon">
@@ -730,6 +738,32 @@ const parseSSEError = (errorStr) => {
   return errorStr
 }
 
+// ===================== Message Timestamp & Copy =====================
+
+const formatMsgTime = (ts) => {
+  if (!ts) return ''
+  try {
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return ''
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    if (d.toDateString() === now.toDateString()) return time
+    return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${time}`
+  } catch { return '' }
+}
+
+const copyMessageContent = async (msg) => {
+  if (!msg.content) return
+  try {
+    await navigator.clipboard.writeText(msg.content)
+    msg._copied = true
+    setTimeout(() => { msg._copied = false }, 2000)
+  } catch {
+    ElMessage.error('复制失败')
+  }
+}
+
 // ===================== Tool Args Formatter =====================
 
 const formatToolArgs = (args) => {
@@ -1064,7 +1098,9 @@ const transformHistoryMessages = (turns, threadId) => {
       toolCalls: [],
       todos: [],
       toolCallsExpanded: false,
-      loading: false
+      loading: false,
+      timestamp: null,
+      _copied: false
     }
 
     let hasAssistantContent = false
@@ -1072,6 +1108,7 @@ const transformHistoryMessages = (turns, threadId) => {
     for (const event of (turn.events || [])) {
       if (event.type === 'content') {
         assistantMsg.content += event.content || ''
+        if (event.timestamp) assistantMsg.timestamp = event.timestamp
         hasAssistantContent = true
       } else if (event.type === 'thinking') {
         assistantMsg.thinkingContent += event.content || ''
@@ -1511,7 +1548,9 @@ const sendMessage = async () => {
     todos: [],
     toolCallsExpanded: false,
     errorMessage: '',
-    loading: true
+    loading: true,
+    timestamp: null,
+    _copied: false
   })
   conv.updatedAt = Date.now()
   scrollToBottom(true)
@@ -1570,6 +1609,7 @@ const sendMessage = async () => {
           const parsed = JSON.parse(data)
           if (parsed.type === 'content') {
             assistantMsg.content += parsed.content
+            if (parsed.timestamp) assistantMsg.timestamp = parsed.timestamp
             updated = true
           } else if (parsed.type === 'thinking') {
             assistantMsg.thinkingContent += parsed.content
@@ -1791,7 +1831,9 @@ const submitApproval = async (interruptMsg) => {
     todos: [],
     toolCallsExpanded: false,
     errorMessage: '',
-    loading: true
+    loading: true,
+    timestamp: null,
+    _copied: false
   }
   conv.messages.push(assistantMsg)
   scrollToBottom(true)
@@ -1843,6 +1885,7 @@ const submitApproval = async (interruptMsg) => {
           const parsed = JSON.parse(data)
           if (parsed.type === 'content') {
             assistantMsg.content += parsed.content
+            if (parsed.timestamp) assistantMsg.timestamp = parsed.timestamp
             updated = true
           } else if (parsed.type === 'thinking') {
             assistantMsg.thinkingContent += parsed.content
@@ -2035,7 +2078,9 @@ const submitAnswer = async (askUserMsg) => {
     todos: [],
     toolCallsExpanded: false,
     errorMessage: '',
-    loading: true
+    loading: true,
+    timestamp: null,
+    _copied: false
   }
   conv.messages.push(assistantMsg)
   scrollToBottom(true)
@@ -2092,6 +2137,7 @@ const submitAnswer = async (askUserMsg) => {
           const parsed = JSON.parse(data)
           if (parsed.type === 'content') {
             assistantMsg.content += parsed.content
+            if (parsed.timestamp) assistantMsg.timestamp = parsed.timestamp
             updated = true
           } else if (parsed.type === 'thinking') {
             assistantMsg.thinkingContent += parsed.content
