@@ -1,136 +1,243 @@
 <template>
-  <div class="app-container">
-    <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="服务器逻辑名称，作为工具名前缀" prop="serverName">
-        <el-input
-          v-model="queryParams.serverName"
-          placeholder="请输入服务器逻辑名称，作为工具名前缀"
-          clearable
-          style="width: 240px"
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
+  <div class="app-container mcpconfig-page">
 
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="Plus"
-          @click="handleAdd"
-          v-hasPermi="['mcpconfig:mcpconfig:add']"
-        >新增</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="Edit"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['mcpconfig:mcpconfig:edit']"
-        >修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="Delete"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['mcpconfig:mcpconfig:remove']"
-        >删除</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="warning"
-          plain
-          icon="Download"
-          @click="handleExport"
-          v-hasPermi="['mcpconfig:mcpconfig:export']"
-        >导出</el-button>
-      </el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
-    </el-row>
+    <el-card shadow="never" class="table-card">
+      <template #header>
+        <div class="table-header">
+          <div class="table-title">
+            <span>配置列表</span>
+            <el-tag size="small" type="info">{{ total }} 条</el-tag>
+          </div>
+          <div class="table-actions">
+            <div v-show="showSearch" class="table-filter">
+              <el-form
+                ref="queryRef"
+                :model="queryParams"
+                :inline="true"
+                label-width="84px"
+                class="filter-form"
+              >
+                <el-form-item label="服务器" prop="serverName" class="filter-item">
+                  <el-input
+                    v-model="queryParams.serverName"
+                    placeholder="作为工具名前缀"
+                    clearable
+                    style="width: 220px"
+                    @keyup.enter="handleQuery"
+                  />
+                </el-form-item>
+              </el-form>
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+            <el-button
+              type="primary"
+              icon="Plus"
+              @click="handleAdd"
+              v-hasPermi="['mcpconfig:mcpconfig:add']"
+            >新增</el-button>
+            <el-button
+              type="success"
+              icon="Edit"
+              :disabled="single"
+              @click="handleUpdate"
+              v-hasPermi="['mcpconfig:mcpconfig:edit']"
+            >修改</el-button>
+            <el-button
+              type="danger"
+              icon="Delete"
+              :disabled="multiple"
+              @click="handleDelete"
+              v-hasPermi="['mcpconfig:mcpconfig:remove']"
+            >删除</el-button>
+            <el-button
+              type="warning"
+              icon="Download"
+              @click="handleExport"
+              v-hasPermi="['mcpconfig:mcpconfig:export']"
+            >导出</el-button>
+            <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
+          </div>
+        </div>
+      </template>
 
-    <el-table v-loading="loading" :data="mcpconfigList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="配置唯一标识符(UUID)" align="center" prop="configId" />
-      <el-table-column label="服务器逻辑名称，作为工具名前缀" align="center" prop="serverName" />
-      <el-table-column label="是否启用此服务器" align="center" prop="enabled" />
-      <el-table-column label="传输类型: stdio / streamable_http / sse / websocket" align="center" prop="transport" />
-      <el-table-column label="stdio模式: 可执行文件路径" align="center" prop="command" />
-      <el-table-column label="stdio模式: 命令行参数列表，" align="center" prop="args" />
-      <el-table-column label="stdio模式: 子进程环境变量字典" align="center" prop="env" />
-      <el-table-column label="stdio模式: 子进程工作目录" align="center" prop="cwd" />
-      <el-table-column label="streamable_http/sse/websocket模式: 远程服务器URL" align="center" prop="url" />
-      <el-table-column label="streamable_http/sse模式: 附加HTTP请求头" align="center" prop="headers" />
-      <el-table-column label="请求超时时间" align="center" prop="timeout" />
-      <el-table-column label="SSE流读取超时时间" align="center" prop="sseReadTimeout" />
-      <el-table-column label="传递给MCP ClientSession的额外参数" align="center" prop="sessionKwargs" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template #default="scope">
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['mcpconfig:mcpconfig:edit']">修改</el-button>
-          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['mcpconfig:mcpconfig:remove']">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <el-table
+        v-loading="loading"
+        :data="mcpconfigList"
+        row-key="configId"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="48" align="center" />
+        <el-table-column label="服务器" prop="serverName" min-width="160" show-overflow-tooltip />
+        <el-table-column label="状态" prop="enabled" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="isEnabled(scope.row.enabled) ? 'success' : 'info'" size="small">
+              {{ isEnabled(scope.row.enabled) ? '启用' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="传输类型" prop="transport" width="160" align="center">
+          <template #default="scope">
+            <el-tag v-if="scope.row.transport" :type="transportTagType(scope.row.transport)" size="small">
+              {{ scope.row.transport }}
+            </el-tag>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="命令/URL" min-width="260" show-overflow-tooltip>
+          <template #default="scope">
+            <span>{{ scope.row.command || scope.row.url || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="超时(ms)" prop="timeout" width="120" align="center" />
+        <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
+        <el-table-column label="操作" width="160" align="center" fixed="right">
+          <template #default="scope">
+            <el-button
+              link
+              type="primary"
+              icon="Edit"
+              @click="handleUpdate(scope.row)"
+              v-hasPermi="['mcpconfig:mcpconfig:edit']"
+            >修改</el-button>
+            <el-button
+              link
+              type="danger"
+              icon="Delete"
+              @click="handleDelete(scope.row)"
+              v-hasPermi="['mcpconfig:mcpconfig:remove']"
+            >删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <pagination
-      v-show="total>0"
-      :total="total"
-      v-model:page="queryParams.pageNum"
-      v-model:limit="queryParams.pageSize"
-      @pagination="getList"
-    />
+      <pagination
+        v-show="total > 0"
+        :total="total"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="getList"
+      />
+    </el-card>
 
-    <!-- 添加或修改MCP服务器配置对话框 -->
-    <el-dialog :title="title" v-model="open" width="500px" append-to-body>
-      <el-form ref="mcpconfigRef" :model="form" :rules="rules" label-width="80px">
-      <el-form-item v-if="renderField(true, true)" label="服务器逻辑名称，作为工具名前缀" prop="serverName">
-        <el-input v-model="form.serverName" placeholder="请输入服务器逻辑名称，作为工具名前缀" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="传输类型: stdio / streamable_http / sse / websocket" prop="transport">
-        <el-input v-model="form.transport" placeholder="请输入传输类型: stdio / streamable_http / sse / websocket" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="stdio模式: 可执行文件路径" prop="command">
-        <el-input v-model="form.command" placeholder="请输入stdio模式: 可执行文件路径" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="stdio模式: 子进程工作目录" prop="cwd">
-        <el-input v-model="form.cwd" placeholder="请输入stdio模式: 子进程工作目录" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="streamable_http/sse/websocket模式: 远程服务器URL" prop="url">
-        <el-input v-model="form.url" placeholder="请输入streamable_http/sse/websocket模式: 远程服务器URL" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="请求超时时间" prop="timeout">
-        <el-input v-model="form.timeout" placeholder="请输入请求超时时间" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="SSE流读取超时时间" prop="sseReadTimeout">
-        <el-input v-model="form.sseReadTimeout" placeholder="请输入SSE流读取超时时间" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="" prop="remark">
-        <el-input v-model="form.remark" placeholder="请输入" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="" prop="description">
-        <el-input v-model="form.description" placeholder="请输入" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, true)" label="" prop="sortNo">
-        <el-input v-model="form.sortNo" placeholder="请输入" />
-      </el-form-item>
-      <el-form-item v-if="renderField(true, false)" label="" prop="delFlag">
-        <el-input v-model="form.delFlag" placeholder="请输入" />
-      </el-form-item>
+    <el-dialog :title="title" v-model="open" width="760px" append-to-body>
+      <el-form ref="mcpconfigRef" :model="form" :rules="rules" label-width="110px" class="dialog-form">
+        <el-divider content-position="left">基础信息</el-divider>
+        <el-row :gutter="16">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="服务器" prop="serverName">
+              <el-input v-model="form.serverName" placeholder="作为工具名前缀" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="启用状态" prop="enabled">
+              <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="传输类型" prop="transport">
+              <el-select v-model="form.transport" placeholder="请选择传输类型" clearable>
+                <el-option
+                  v-for="item in transportOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="排序号" prop="sortNo">
+              <el-input-number v-model="form.sortNo" :min="0" :step="1" controls-position="right" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
+        <el-collapse v-model="collapseActive" class="config-collapse" accordion>
+          <el-collapse-item name="stdio">
+            <template #title>stdio 配置</template>
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="可执行文件" prop="command">
+                  <el-input v-model="form.command" placeholder="例如：/usr/bin/node" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="工作目录" prop="cwd">
+                  <el-input v-model="form.cwd" placeholder="子进程工作目录" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24">
+                <el-form-item label="命令参数" prop="args">
+                  <el-input v-model="form.args" type="textarea" :rows="3" placeholder="例如：-port 8080" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24">
+                <el-form-item label="环境变量" prop="env">
+                  <el-input v-model="form.env" type="textarea" :rows="3" placeholder="JSON 格式环境变量" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-collapse-item>
+
+          <el-collapse-item name="remote">
+            <template #title>远程连接</template>
+            <el-row :gutter="16">
+              <el-col :xs="24">
+                <el-form-item label="服务地址" prop="url">
+                  <el-input v-model="form.url" placeholder="https://example.com/mcp" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24">
+                <el-form-item label="请求头" prop="headers">
+                  <el-input v-model="form.headers" type="textarea" :rows="3" placeholder="JSON 格式请求头" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-collapse-item>
+
+          <el-collapse-item name="timeouts">
+            <template #title>超时与会话</template>
+            <el-row :gutter="16">
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="请求超时(ms)" prop="timeout">
+                  <el-input-number v-model="form.timeout" :min="0" controls-position="right" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12">
+                <el-form-item label="SSE 读取超时(ms)" prop="sseReadTimeout">
+                  <el-input-number v-model="form.sseReadTimeout" :min="0" controls-position="right" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24">
+                <el-form-item label="Session 参数" prop="sessionKwargs">
+                  <el-input v-model="form.sessionKwargs" type="textarea" :rows="3" placeholder="JSON 格式参数" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-collapse-item>
+
+          <el-collapse-item name="extra">
+            <template #title>备注与描述</template>
+            <el-row :gutter="16">
+              <el-col :xs="24">
+                <el-form-item label="备注" prop="remark">
+                  <el-input v-model="form.remark" type="textarea" :rows="2" />
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24">
+                <el-form-item label="描述" prop="description">
+                  <el-input v-model="form.description" type="textarea" :rows="3" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-collapse-item>
+        </el-collapse>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">确 定</el-button>
-          <el-button @click="cancel">取 消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+          <el-button @click="cancel">取消</el-button>
         </div>
       </template>
     </el-dialog>
@@ -151,6 +258,21 @@ const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
 const title = ref("");
+const collapseActive = ref("stdio");
+
+const transportOptions = [
+  { label: "stdio", value: "stdio" },
+  { label: "streamable_http", value: "streamable_http" },
+  { label: "sse", value: "sse" },
+  { label: "websocket", value: "websocket" },
+];
+
+const transportTagMap = {
+  stdio: "info",
+  streamable_http: "success",
+  sse: "warning",
+  websocket: "danger",
+};
 
 const data = reactive({
   form: {},
@@ -161,14 +283,22 @@ const data = reactive({
   },
   rules: {
     serverName: [
-      { required: true, message: "服务器逻辑名称，作为工具名前缀不能为空", trigger: "blur" }
+      { required: true, message: "服务器不能为空", trigger: "blur" }
     ],
   }
 });
 
 const { queryParams, form, rules } = toRefs(data);
 
-/** 查询MCP服务器配置列表 */
+function isEnabled(value) {
+  return value === 1 || value === "1" || value === true;
+}
+
+function transportTagType(value) {
+  return transportTagMap[value] || "info";
+}
+
+/** 查询MCP服务配置列表 */
 function getList() {
   loading.value = true;
   listMcpconfig(queryParams.value).then(response => {
@@ -189,7 +319,7 @@ function reset() {
   form.value = {
     configId: null,
     serverName: null,
-    enabled: null,
+    enabled: 1,
     transport: null,
     command: null,
     args: null,
@@ -235,7 +365,7 @@ function handleSelectionChange(selection) {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "添加MCP服务器配置";
+  title.value = "新增 MCP 服务配置";
 }
 
 /** 修改按钮操作 */
@@ -245,7 +375,7 @@ function handleUpdate(row) {
   getMcpconfig(_configId).then(response => {
     form.value = response.data;
     open.value = true;
-    title.value = "修改MCP服务器配置";
+    title.value = "修改 MCP 服务配置";
   });
 }
 
@@ -254,13 +384,13 @@ function submitForm() {
   proxy.$refs["mcpconfigRef"].validate(valid => {
     if (valid) {
       if (form.value.configId != null) {
-        updateMcpconfig(form.value).then(response => {
+        updateMcpconfig(form.value).then(() => {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
           getList();
         });
       } else {
-        addMcpconfig(form.value).then(response => {
+        addMcpconfig(form.value).then(() => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();
@@ -273,14 +403,13 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _configIds = row.configId || ids.value;
-  proxy.$modal.confirm('是否确认删除MCP服务器配置编号为"' + _configIds + '"的数据项？').then(function() {
+  proxy.$modal.confirm(`是否确认删除 MCP 服务配置编号为"${_configIds}"的数据项？`).then(function() {
     return delMcpconfig(_configIds);
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("删除成功");
   }).catch(() => {});
 }
-
 
 /** 导出按钮操作 */
 function handleExport() {
@@ -289,10 +418,139 @@ function handleExport() {
   }, `mcpconfig_${new Date().getTime()}.xlsx`);
 }
 
-/** 是否渲染字段 */
-function renderField(insert, edit) {
-  return form.value.configId == null ? insert : edit;
-}
-
 getList();
 </script>
+
+<style scoped>
+.mcpconfig-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-card,
+.table-card {
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-title,
+.table-title {
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.filter-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.filter-form :deep(.el-form-item) {
+  margin: 0 12px 0 0;
+}
+
+.filter-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.table-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.table-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 280px;
+  margin-right: auto;
+  flex-wrap: wrap;
+}
+
+.table-card :deep(.el-card__header) {
+  padding: 14px 20px;
+  border-bottom: 1px solid #eef2f7;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
+}
+
+.filter-card :deep(.el-card__body) {
+  padding: 12px 16px;
+}
+
+.table-card :deep(.el-card__body) {
+  padding: 16px 20px 20px;
+}
+
+.table-card :deep(.el-table) {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table-card :deep(.el-table__header-wrapper) {
+  background: #f8fafc;
+}
+
+.table-card :deep(.el-pagination) {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.config-collapse {
+  margin-top: 12px;
+}
+
+.dialog-form :deep(.el-divider__text) {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.dialog-form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.text-muted {
+  color: #9ca3af;
+}
+</style>
