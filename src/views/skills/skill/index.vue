@@ -215,12 +215,14 @@
       <el-tabs v-model="importType" class="import-tabs">
         <el-tab-pane label="上传 ZIP 包" name="zip">
           <el-upload
+            ref="uploadRef"
             class="skill-upload"
             drag
             :auto-upload="false"
             :limit="1"
             accept=".zip"
-            :before-upload="handleUpload"
+            :on-change="onZipFileChange"
+            :on-remove="onZipFileRemove"
           >
             <el-icon class="upload-icon"><UploadFilled /></el-icon>
             <div class="upload-text">
@@ -228,6 +230,18 @@
               <p class="upload-hint">仅支持 .zip 文件，建议不超过 50MB</p>
             </div>
           </el-upload>
+          <div class="dialog-footer import-footer">
+            <el-button @click="cancelImport" class="cancel-btn">取消</el-button>
+            <el-button
+              type="primary"
+              @click="handleZipImport"
+              :loading="submitLoading"
+              :disabled="!zipFile"
+              class="action-btn action-btn--primary"
+            >
+              导入
+            </el-button>
+          </div>
         </el-tab-pane>
 
         <el-tab-pane label="从 URL 导入" name="url">
@@ -273,7 +287,7 @@
 </template>
 
 <script setup name="Skill">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import {
   Search, Plus, Upload, FolderOpened, Tools, MoreFilled,
   Edit, Switch, Delete, UploadFilled, RefreshRight
@@ -316,6 +330,24 @@ const {
 
 const enabledCount = computed(() => skillList.value.filter(item => item.enabled).length)
 const importedCount = computed(() => skillList.value.filter(item => ['upload', 'url'].includes(item.sourceType)).length)
+
+const uploadRef = ref()
+const zipFile = ref(null)
+
+const onZipFileChange = (file) => {
+  zipFile.value = file
+}
+
+const onZipFileRemove = () => {
+  zipFile.value = null
+}
+
+const handleZipImport = async () => {
+  if (!zipFile.value) return
+  await handleUpload(zipFile.value)
+  zipFile.value = null
+  uploadRef.value?.clearFiles()
+}
 
 const getIconClass = (sourceType) => {
   const map = { manual: 'icon--blue', upload: 'icon--green', url: 'icon--amber' }
