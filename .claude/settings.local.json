@@ -24,7 +24,8 @@
       "Bash(npx vite:*)",
       "Bash(npx vue-tsc:*)",
       "Bash(npx:*)",
-      "Bash(find D:\\\\code\\\\project\\\\casaego-pg-github\\\\casego-frontend-pg\\\\src\\\\views:*)"
+      "Bash(find D:\\\\code\\\\project\\\\casaego-pg-github\\\\casego-frontend-pg\\\\src\\\\views:*)",
+      "Bash(find \"/d/code/project/casaego-pg-github/casego-frontend-pg/src/views\" -name \"*.vue\" -type f -exec grep -l \"el-card\\\\|class.*card\" {})"
     ],
     "deny": [],
     "ask": []
