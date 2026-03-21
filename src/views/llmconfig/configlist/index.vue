@@ -33,7 +33,7 @@
     <main class="chat-main" :class="{ 'workspace-open': workspacePanelVisible }">
 
       <!-- Messages Area -->
-      <div class="chat-messages" ref="messagesRef" @scroll="handleMessagesScroll">
+      <div class="chat-messages" ref="messagesRef" @scroll="handleMessagesScroll" @click="handleMessagesClick">
         <!-- Welcome Screen -->
         <div v-if="currentMessages.length === 0 && !historyLoading" class="welcome-screen">
           <div class="welcome-icon">
@@ -662,6 +662,7 @@ import 'highlight.js/styles/github-dark-dimmed.css'
 import { getToken } from '@/utils/auth'
 import request from '@/utils/request'
 import { stopChatSession, uploadChatAttachments, fetchAttachmentBlob } from '@/api/chat/agent'
+import { downloadWorkspaceFile } from '@/api/chat/workspace'
 import { allMcpconfig } from '@/api/mcpconfig/mcpconfig'
 import { ElMessage } from 'element-plus'
 import WorkspacePanel from './components/WorkspacePanel.vue'
@@ -718,9 +719,39 @@ marked.use({ gfm: true, breaks: true, renderer: markedRenderer })
 const renderMarkdown = (text) => {
   if (!text) return ''
   try {
-    return marked.parse(text)
+    let html = marked.parse(text)
+    // Post-process: detect image paths in <code> tags starting with /
+    const threadId = currentConversationId.value
+    if (threadId) {
+      html = html.replace(WS_IMAGE_PATH_REGEX, (match, path) => {
+        const cacheKey = `${threadId}:${path}`
+        const cached = workspaceImageCache[cacheKey]
+        if (cached && cached !== 'loading' && cached !== 'error') {
+          return `<div class="ws-inline-image"><img src="${cached}" alt="${path}" class="ws-rendered-image" /></div>`
+        } else if (cached === 'error') {
+          return match
+        } else {
+          if (!cached) {
+            workspaceImageCache[cacheKey] = 'loading'
+            fetchWorkspaceImage(threadId, path, cacheKey)
+          }
+          return `<div class="ws-inline-image ws-inline-image-loading"><div class="loading-spinner small"></div><span>${path}</span></div>`
+        }
+      })
+    }
+    return html
   } catch {
     return text
+  }
+}
+
+const fetchWorkspaceImage = async (threadId, path, cacheKey) => {
+  try {
+    const wsPath = path.startsWith('/') ? path.slice(1) : path
+    const blob = await downloadWorkspaceFile(threadId, wsPath)
+    workspaceImageCache[cacheKey] = URL.createObjectURL(blob)
+  } catch {
+    workspaceImageCache[cacheKey] = 'error'
   }
 }
 
@@ -921,6 +952,10 @@ const ATTACHMENT_ALL_EXTS = [...ATTACHMENT_IMAGE_EXTS, ...ATTACHMENT_TEXT_EXTS]
 // Image blob URL cache: storedName -> blobUrl
 const attachmentImageCache = reactive({})
 
+// Workspace image cache for markdown-rendered images: "threadId:/path" -> blobUrl | 'loading' | 'error'
+const workspaceImageCache = reactive({})
+const WS_IMAGE_PATH_REGEX = /<code>(\/[^\s<>`]+\.(?:png|jpg|jpeg|gif|webp|bmp|svg))<\/code>/gi
+
 // Image lightbox
 const lightboxVisible = ref(false)
 const lightboxUrl = ref('')
@@ -932,6 +967,13 @@ const openImageLightbox = (url, alt) => {
 }
 const closeLightbox = () => {
   lightboxVisible.value = false
+}
+
+const handleMessagesClick = (e) => {
+  const img = e.target.closest('.ws-rendered-image')
+  if (img) {
+    openImageLightbox(img.src, img.alt)
+  }
 }
 
 let abortController = null
@@ -2393,6 +2435,10 @@ onUnmounted(() => {
   if (cachedUserAvatar.value) {
     URL.revokeObjectURL(cachedUserAvatar.value)
   }
+  // 释放 workspace 图片 blob URL
+  Object.values(workspaceImageCache).forEach(url => {
+    if (url && url !== 'loading' && url !== 'error') URL.revokeObjectURL(url)
+  })
 })
 </script>
 

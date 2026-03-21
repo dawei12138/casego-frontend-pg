@@ -699,7 +699,22 @@ const handleSelectFile = (node) => {
 }
 
 const handleToggleFolder = (node) => {
-  node.expanded = !node.expanded
+  // Must toggle the original node in fileTree, not the derived copy from sortedFileTree
+  const original = findNodeInTree(fileTree.value, node.path)
+  if (original) {
+    original.expanded = !original.expanded
+  }
+}
+
+const findNodeInTree = (nodes, path) => {
+  for (const node of nodes) {
+    if (node.path === path) return node
+    if (node.type === 'directory' && node.children) {
+      const found = findNodeInTree(node.children, path)
+      if (found) return found
+    }
+  }
+  return null
 }
 
 const handleDeleteNode = async (node) => {

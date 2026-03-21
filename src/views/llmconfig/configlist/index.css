@@ -184,6 +184,35 @@ html.dark .chat-markdown-body hr {
   font-weight: 600;
 }
 
+/* ==================== Workspace Inline Images ==================== */
+.ws-inline-image {
+  margin: 8px 0;
+}
+.ws-inline-image img.ws-rendered-image {
+  max-width: 100%;
+  max-height: 480px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.ws-inline-image img.ws-rendered-image:hover {
+  opacity: 0.85;
+}
+.ws-inline-image-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #999;
+}
+html.dark .ws-inline-image-loading {
+  background: #2a2a2a;
+  color: #666;
+}
+
 /* ==================== Model Popover (unscoped for el-popover) ==================== */
 .model-popover {
   display: flex;
