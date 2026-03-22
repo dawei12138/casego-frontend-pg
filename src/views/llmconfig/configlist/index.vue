@@ -513,46 +513,72 @@
                   <span>联网搜索</span>
                 </button>
                 <el-popover
-                  v-model:visible="mcpPopoverVisible"
+                  v-model:visible="toolPopoverVisible"
                   placement="top-start"
-                  :width="280"
+                  :width="480"
                   trigger="click"
                   popper-style="padding: 12px;"
-                  @show="fetchMcpConfigs"
+                  @show="fetchToolPopoverData"
                 >
                   <template #reference>
                     <button
                       class="thinking-pill mcp-tool-pill"
-                      :class="{ active: selectedMcpConfigIds.length > 0 }"
-                      title="MCP 工具"
+                      :class="{ active: toolBadgeCount > 0 }"
+                      title="Skills & MCP 工具"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                      <span>MCP工具</span>
-                      <span v-if="selectedMcpConfigIds.length > 0" class="mcp-badge">{{ selectedMcpConfigIds.length }}</span>
+                      <span>工具</span>
+                      <span v-if="toolBadgeCount > 0" class="mcp-badge">{{ toolBadgeCount }}</span>
                     </button>
                   </template>
-                  <div class="mcp-popover">
-                    <div class="mcp-popover-title">选择 MCP 工具</div>
-                    <div v-if="mcpLoading" class="mcp-popover-loading">
-                      <div class="loading-spinner small"></div>
-                      <span>加载中...</span>
-                    </div>
-                    <div v-else-if="mcpConfigList.length === 0" class="mcp-popover-empty">暂无可用的 MCP 工具</div>
-                    <div v-else class="mcp-popover-list">
-                      <label
-                        v-for="item in mcpConfigList"
-                        :key="item.configId"
-                        class="mcp-popover-item"
-                      >
-                        <el-checkbox
-                          :model-value="selectedMcpConfigIds.includes(item.configId)"
-                          @change="(val) => toggleMcpConfig(item.configId, val)"
-                        />
-                        <span class="mcp-item-name">{{ item.serverName }}</span>
-                      </label>
-                    </div>
-                    <div v-if="mcpConfigList.length > 0" class="mcp-popover-footer">
-                      <button class="mcp-clear-btn" @click="selectedMcpConfigIds = []">清除选择</button>
+                  <div class="tool-selector-popover">
+                    <div class="tool-selector-columns">
+                      <!-- Skills Column -->
+                      <div class="tool-selector-col">
+                        <div class="tool-col-title">Skills 技能</div>
+                        <div v-if="skillLoading" class="tool-col-loading">
+                          <div class="loading-spinner small"></div>
+                          <span>加载中...</span>
+                        </div>
+                        <div v-else-if="skillList.length === 0" class="tool-col-empty">暂无可用技能</div>
+                        <div v-else class="tool-col-list">
+                          <button
+                            v-for="item in skillList"
+                            :key="item.skillId"
+                            class="tool-toggle-btn"
+                            :class="{ active: selectedSkillIds.includes(item.skillId) }"
+                            @click="toggleSkill(item.skillId)"
+                          >
+                            {{ item.displayName || item.skillName }}
+                          </button>
+                        </div>
+                        <div v-if="skillList.length > 0 && selectedSkillIds.length > 0" class="tool-col-footer">
+                          <button class="tool-clear-btn" @click="selectedSkillIds = []">清除</button>
+                        </div>
+                      </div>
+                      <!-- MCP Column -->
+                      <div class="tool-selector-col">
+                        <div class="tool-col-title">MCP 工具</div>
+                        <div v-if="mcpLoading" class="tool-col-loading">
+                          <div class="loading-spinner small"></div>
+                          <span>加载中...</span>
+                        </div>
+                        <div v-else-if="mcpConfigList.length === 0" class="tool-col-empty">暂无可用 MCP 工具</div>
+                        <div v-else class="tool-col-list">
+                          <button
+                            v-for="item in mcpConfigList"
+                            :key="item.configId"
+                            class="tool-toggle-btn"
+                            :class="{ active: selectedMcpConfigIds.includes(item.configId) }"
+                            @click="toggleMcpConfig(item.configId)"
+                          >
+                            {{ item.serverName }}
+                          </button>
+                        </div>
+                        <div v-if="mcpConfigList.length > 0 && selectedMcpConfigIds.length > 0" class="tool-col-footer">
+                          <button class="tool-clear-btn" @click="selectedMcpConfigIds = []">清除</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </el-popover>
@@ -664,6 +690,7 @@ import request from '@/utils/request'
 import { stopChatSession, uploadChatAttachments, fetchAttachmentBlob } from '@/api/chat/agent'
 import { downloadWorkspaceFile } from '@/api/chat/workspace'
 import { allMcpconfig } from '@/api/mcpconfig/mcpconfig'
+import { listAllSkill } from '@/api/skills/skill'
 import { ElMessage } from 'element-plus'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import useUserStore from '@/store/modules/user'
@@ -925,10 +952,13 @@ const selectedModel = ref('gpt-5.2')
 const modelPopoverVisible = ref(false)
 const enableThinking = ref(false)
 const enableWebSearch = ref(false)
-const mcpPopoverVisible = ref(false)
+const toolPopoverVisible = ref(false)
 const mcpConfigList = ref([])
 const selectedMcpConfigIds = ref([])
 const mcpLoading = ref(false)
+const skillList = ref([])
+const selectedSkillIds = ref([])
+const skillLoading = ref(false)
 const inputMessage = ref('')
 const isStreaming = ref(false)
 const conversations = ref([])
@@ -1511,7 +1541,7 @@ const loadAttachmentImagesForMessages = (messages) => {
   }
 }
 
-// ===================== MCP Config =====================
+// ===================== MCP Config & Skills =====================
 
 const fetchMcpConfigs = async () => {
   if (mcpLoading.value) return
@@ -1527,14 +1557,41 @@ const fetchMcpConfigs = async () => {
   }
 }
 
-const toggleMcpConfig = (configId, checked) => {
-  if (checked) {
-    if (!selectedMcpConfigIds.value.includes(configId)) {
-      selectedMcpConfigIds.value.push(configId)
-    }
-  } else {
+const toggleMcpConfig = (configId) => {
+  if (selectedMcpConfigIds.value.includes(configId)) {
     selectedMcpConfigIds.value = selectedMcpConfigIds.value.filter(id => id !== configId)
+  } else {
+    selectedMcpConfigIds.value.push(configId)
   }
+}
+
+const fetchSkills = async () => {
+  if (skillLoading.value) return
+  skillLoading.value = true
+  try {
+    const res = await listAllSkill({ enabled: true })
+    skillList.value = res.data || []
+  } catch (e) {
+    console.error('Failed to fetch skills:', e)
+    skillList.value = []
+  } finally {
+    skillLoading.value = false
+  }
+}
+
+const toggleSkill = (skillId) => {
+  if (selectedSkillIds.value.includes(skillId)) {
+    selectedSkillIds.value = selectedSkillIds.value.filter(id => id !== skillId)
+  } else {
+    selectedSkillIds.value.push(skillId)
+  }
+}
+
+const toolBadgeCount = computed(() => selectedMcpConfigIds.value.length + selectedSkillIds.value.length)
+
+const fetchToolPopoverData = () => {
+  fetchMcpConfigs()
+  fetchSkills()
 }
 
 // ===================== Send Message =====================
@@ -1617,7 +1674,8 @@ const sendMessage = async () => {
         attachments: attachments,
         enableThinking: enableThinking.value,
         enableWebSearch: enableWebSearch.value,
-        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {})
+        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
+        ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
       }),
       signal: abortController.signal
     })
@@ -2145,7 +2203,8 @@ const submitAnswer = async (askUserMsg) => {
         answers,
         enableThinking: enableThinking.value,
         enableWebSearch: enableWebSearch.value,
-        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {})
+        ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
+        ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
       }),
       signal: abortController.signal
     })

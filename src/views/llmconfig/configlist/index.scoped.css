@@ -1021,6 +1021,106 @@
   background: rgba(239, 68, 68, 0.06);
 }
 
+/* ===== Combined Tool Selector Popover ===== */
+.tool-selector-popover {
+  display: flex;
+  flex-direction: column;
+}
+.tool-selector-columns {
+  display: flex;
+  gap: 12px;
+}
+.tool-selector-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tool-selector-col + .tool-selector-col {
+  border-left: 1px solid var(--header-border, #e5e7eb);
+  padding-left: 12px;
+}
+.tool-col-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--header-border, #e5e7eb);
+}
+.tool-col-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0;
+  justify-content: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+.tool-col-empty {
+  padding: 12px 0;
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+}
+.tool-col-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.tool-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--header-border, #e0e0e0);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #374151);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.tool-toggle-btn:hover {
+  border-color: #a78bfa;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.04);
+}
+.tool-toggle-btn.active {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+  font-weight: 500;
+}
+.tool-col-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--header-border, #e5e7eb);
+}
+.tool-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #6b7280);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.tool-clear-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
 .input-action-btn {
   display: flex;
   align-items: center;
