@@ -1116,10 +1116,8 @@ const switchConversation = async (threadId) => {
   todoFloatExpanded.value = false
 
   const conv = currentConversation.value
-  if (conv && !conv.isNew && conv.messages.length === 0) {
-    // 加载历史消息
-    historyPage.value = 1
-    await loadChatHistory(threadId)
+  if (conv && !conv.isNew) {
+    await ensureConversationActiveState(threadId)
   }
 
   nextTick(() => {
@@ -1424,6 +1422,246 @@ const loadMoreHistory = async () => {
   })
 }
 
+const createAssistantPlaceholder = () => ({
+  id: generateId(),
+  role: 'assistant',
+  content: '',
+  thinkingContent: '',
+  thinkingExpanded: false,
+  toolCalls: [],
+  todos: [],
+  toolCallsExpanded: false,
+  errorMessage: '',
+  loading: true,
+  timestamp: null,
+  _copied: false
+})
+
+const normalizeAssistantMessage = (msg) => {
+  if (typeof msg.content !== 'string') msg.content = ''
+  if (typeof msg.thinkingContent !== 'string') msg.thinkingContent = ''
+  if (!Array.isArray(msg.toolCalls)) msg.toolCalls = []
+  if (!Array.isArray(msg.todos)) msg.todos = []
+  if (typeof msg.errorMessage !== 'string') msg.errorMessage = ''
+  if (typeof msg.thinkingExpanded !== 'boolean') msg.thinkingExpanded = false
+  if (typeof msg.toolCallsExpanded !== 'boolean') msg.toolCallsExpanded = false
+  if (msg.timestamp === undefined) msg.timestamp = null
+  if (typeof msg._copied !== 'boolean') msg._copied = false
+}
+
+const ensureReconnectAssistantMessage = (conv) => {
+  let assistantMsg = null
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    const msg = conv.messages[i]
+    if (msg.role === 'assistant') {
+      assistantMsg = msg
+      break
+    }
+    if (msg.role === 'interrupt' || msg.role === 'ask_user') {
+      break
+    }
+  }
+
+  if (!assistantMsg || !assistantMsg.loading) {
+    assistantMsg = createAssistantPlaceholder()
+    conv.messages.push(assistantMsg)
+  }
+
+  normalizeAssistantMessage(assistantMsg)
+  assistantMsg.loading = true
+  assistantMsg.errorMessage = ''
+  return assistantMsg
+}
+
+const reconnectChatStream = async (threadId) => {
+  if (!threadId) return false
+  const conv = conversations.value.find(c => c.threadId === threadId)
+  if (!conv || conv.isNew) return false
+
+  isStreaming.value = true
+  const streamController = new AbortController()
+  abortController = streamController
+
+  let assistantMsg = null
+  let connected = false
+  try {
+    const baseURL = import.meta.env.VITE_APP_BASE_API
+    const response = await fetch(`${baseURL}/chat/agent/stream/reconnect?thread_id=${encodeURIComponent(threadId)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + getToken()
+      },
+      signal: streamController.signal
+    })
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('text/event-stream') || !response.body) {
+      return false
+    }
+
+    connected = true
+
+    if (conv.messages.length === 0) {
+      historyPage.value = 1
+      await loadChatHistory(threadId)
+    }
+
+    assistantMsg = ensureReconnectAssistantMessage(conv)
+    scrollToBottom(true)
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split(/\r?\n/)
+      buffer = lines.pop() || ''
+
+      let updated = false
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.startsWith('data:')) continue
+
+        const data = trimmed.slice(trimmed.indexOf(':') + 1).trim()
+        if (data === '[DONE]') {
+          assistantMsg.loading = false
+          break
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.type === 'content') {
+            assistantMsg.content += parsed.content
+            if (parsed.timestamp) assistantMsg.timestamp = parsed.timestamp
+            updated = true
+          } else if (parsed.type === 'thinking') {
+            assistantMsg.thinkingContent += parsed.content
+            nextTick(() => scrollThinkingToBottom(assistantMsg.id))
+            updated = true
+          } else if (parsed.type === 'tool_call') {
+            if (parsed.tool === 'ask_user_question') {
+              updated = true
+            } else {
+              assistantMsg.toolCalls.push({ tool: parsed.tool, args: parsed.args || null, result: null, loading: true, callId: parsed.call_id || null, expanded: false })
+              if (parsed.tool === 'write_todos' && parsed.args?.todos) {
+                assistantMsg.todos = parsed.args.todos
+              }
+              updated = true
+            }
+          } else if (parsed.type === 'tool_result') {
+            if (parsed.tool === 'ask_user_question') {
+              updated = true
+            } else {
+              let tc = null
+              if (parsed.call_id) {
+                tc = assistantMsg.toolCalls.find(t => t.callId === parsed.call_id)
+              }
+              if (!tc) {
+                tc = assistantMsg.toolCalls.find(t => t.tool === parsed.tool && t.loading)
+              }
+              if (tc) {
+                tc.result = parsed.result
+                tc.args = parsed.args || tc.args
+                tc.loading = false
+              } else {
+                assistantMsg.toolCalls.push({ tool: parsed.tool, args: parsed.args || null, result: parsed.result, loading: false, callId: parsed.call_id || null, expanded: false })
+              }
+              if (parsed.tool === 'write_todos' && parsed.args?.todos) {
+                assistantMsg.todos = parsed.args.todos
+              }
+              updated = true
+            }
+          } else if (parsed.type === 'interrupt') {
+            assistantMsg.loading = false
+            const interruptMsg = {
+              id: generateId(),
+              role: 'interrupt',
+              threadId: threadId,
+              actions: parsed.actions.map(action => ({
+                ...action,
+                decision: null,
+                editedArgsText: JSON.stringify(action.args, null, 2)
+              })),
+              submitting: false
+            }
+            conv.messages.push(interruptMsg)
+            isStreaming.value = false
+            scrollToBottom(true)
+            return true
+          } else if (parsed.type === 'ask_user') {
+            assistantMsg.loading = false
+            const askUserMsg = {
+              id: generateId(),
+              role: 'ask_user',
+              threadId: threadId,
+              requestId: parsed.request_id,
+              activeIdx: 0,
+              questions: parsed.questions.map(q => ({
+                ...q,
+                selectedOption: null,
+                selectedOptions: [],
+                customText: ''
+              })),
+              submitting: false,
+              processed: false
+            }
+            conv.messages.push(askUserMsg)
+            isStreaming.value = false
+            scrollToBottom(true)
+            return true
+          } else if (parsed.type === 'error') {
+            assistantMsg.errorMessage = parseSSEError(parsed.error)
+            assistantMsg.loading = false
+            updated = true
+          }
+        } catch {
+          // Skip malformed JSON lines
+        }
+      }
+
+      if (updated) {
+        scrollToBottom()
+        debouncedHighlight()
+      }
+    }
+
+    assistantMsg.loading = false
+    return true
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      return connected
+    }
+    if (connected && assistantMsg) {
+      console.error('Reconnect SSE error:', error)
+      assistantMsg.content += `\n\n> 请求失败: ${error.message}`
+      assistantMsg.loading = false
+    }
+    return false
+  } finally {
+    if (abortController === streamController) {
+      isStreaming.value = false
+      abortController = null
+    }
+    highlightCode()
+  }
+}
+
+const ensureConversationActiveState = async (threadId) => {
+  const conv = conversations.value.find(c => c.threadId === threadId)
+  if (!conv || conv.isNew) return
+
+  const reconnected = await reconnectChatStream(threadId)
+  if (!reconnected && conv.messages.length === 0) {
+    historyPage.value = 1
+    await loadChatHistory(threadId)
+  }
+}
+
 // ===================== Attachment Handling =====================
 
 const formatFileSize = (bytes) => {
@@ -1637,26 +1875,14 @@ const sendMessage = async () => {
   }
 
   // Assistant placeholder
-  conv.messages.push({
-    id: generateId(),
-    role: 'assistant',
-    content: '',
-    thinkingContent: '',
-    thinkingExpanded: false,
-    toolCalls: [],
-    todos: [],
-    toolCallsExpanded: false,
-    errorMessage: '',
-    loading: true,
-    timestamp: null,
-    _copied: false
-  })
+  conv.messages.push(createAssistantPlaceholder())
   conv.updatedAt = Date.now()
   scrollToBottom(true)
 
   const assistantMsg = conv.messages[conv.messages.length - 1]
   isStreaming.value = true
-  abortController = new AbortController()
+  const streamController = new AbortController()
+  abortController = streamController
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -1677,7 +1903,7 @@ const sendMessage = async () => {
         ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
         ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
       }),
-      signal: abortController.signal
+      signal: streamController.signal
     })
 
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -1819,8 +2045,10 @@ const sendMessage = async () => {
     }
     assistantMsg.loading = false
   } finally {
-    isStreaming.value = false
-    abortController = null
+    if (abortController === streamController) {
+      isStreaming.value = false
+      abortController = null
+    }
     highlightCode()
   }
 }
@@ -1920,26 +2148,13 @@ const submitApproval = async (interruptMsg) => {
   // 标记 interrupt 消息为已处理
   interruptMsg.processed = true
 
-  // 添加一条 AI 消息占位符
-  const assistantMsg = {
-    id: generateId(),
-    role: 'assistant',
-    content: '',
-    thinkingContent: '',
-    thinkingExpanded: false,
-    toolCalls: [],
-    todos: [],
-    toolCallsExpanded: false,
-    errorMessage: '',
-    loading: true,
-    timestamp: null,
-    _copied: false
-  }
+  const assistantMsg = createAssistantPlaceholder()
   conv.messages.push(assistantMsg)
   scrollToBottom(true)
 
   isStreaming.value = true
-  abortController = new AbortController()
+  const streamController = new AbortController()
+  abortController = streamController
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -1953,7 +2168,7 @@ const submitApproval = async (interruptMsg) => {
         threadId: interruptMsg.threadId,
         decisions
       }),
-      signal: abortController.signal
+      signal: streamController.signal
     })
 
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -2089,8 +2304,10 @@ const submitApproval = async (interruptMsg) => {
     assistantMsg.loading = false
   } finally {
     interruptMsg.submitting = false
-    isStreaming.value = false
-    abortController = null
+    if (abortController === streamController) {
+      isStreaming.value = false
+      abortController = null
+    }
     highlightCode()
   }
 }
@@ -2167,26 +2384,13 @@ const submitAnswer = async (askUserMsg) => {
   // 标记为已处理
   askUserMsg.processed = true
 
-  // 添加 AI 消息占位符
-  const assistantMsg = {
-    id: generateId(),
-    role: 'assistant',
-    content: '',
-    thinkingContent: '',
-    thinkingExpanded: false,
-    toolCalls: [],
-    todos: [],
-    toolCallsExpanded: false,
-    errorMessage: '',
-    loading: true,
-    timestamp: null,
-    _copied: false
-  }
+  const assistantMsg = createAssistantPlaceholder()
   conv.messages.push(assistantMsg)
   scrollToBottom(true)
 
   isStreaming.value = true
-  abortController = new AbortController()
+  const streamController = new AbortController()
+  abortController = streamController
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -2206,7 +2410,7 @@ const submitAnswer = async (askUserMsg) => {
         ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
         ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
       }),
-      signal: abortController.signal
+      signal: streamController.signal
     })
 
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -2343,8 +2547,10 @@ const submitAnswer = async (askUserMsg) => {
     assistantMsg.loading = false
   } finally {
     askUserMsg.submitting = false
-    isStreaming.value = false
-    abortController = null
+    if (abortController === streamController) {
+      isStreaming.value = false
+      abortController = null
+    }
     highlightCode()
   }
 }
@@ -2455,9 +2661,9 @@ const loadConversations = async () => {
         messages: [],
         isNew: false
       }))
-      currentConversationId.value = res.rows[0].threadId
-      // 加载第一个对话的历史消息
-      await loadChatHistory(res.rows[0].threadId)
+      const firstThreadId = res.rows[0].threadId
+      currentConversationId.value = firstThreadId
+      await ensureConversationActiveState(firstThreadId)
       nextTick(() => {
         scrollToBottom(true)
         highlightCode()
