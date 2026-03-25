@@ -139,3 +139,39 @@ export function delSkillFile(skillId, fileId) {
     method: 'delete'
   })
 }
+
+// 新增技能子文件夹
+export function addSkillFolder(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/folder',
+    method: 'post',
+    data: data
+  })
+}
+
+// 重命名技能子文件夹
+export function renameSkillFolder(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/folder/rename',
+    method: 'put',
+    data: data
+  })
+}
+
+// 删除技能子文件夹
+export function delSkillFolder(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/folder',
+    method: 'delete',
+    data: data
+  })
+}
+
+// 移动技能文件
+export function moveSkillFile(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file/move',
+    method: 'put',
+    data: data
+  })
+}

@@ -707,7 +707,7 @@ const PROVIDER_MODELS = {
   //moonshot: { label: 'Moonshot', abbr: 'M', color: '#1a1a1a', models: ['moonshot-v1-8k', 'moonshot-v1-32k'] },
   //ollama: { label: 'Ollama', abbr: 'O', color: '#0f172a', models: ['llama3', 'qwen2'] },
   //azure_openai: { label: 'Azure OpenAI', abbr: 'Az', color: '#0078d4', models: ['gpt-4o', 'gpt-4o-mini'] },
-  openai: { label: 'OpenAI', abbr: 'OA', color: '#10a37f', models: ['gpt-5.2-high','gpt-5.2','gpt-5.1-high','gpt-5.1', 'gpt-5'] },
+  openai: { label: 'OpenAI', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-xhigh','gpt-5.4-high','gpt-5.2-high','gpt-5.2','gpt-5.1-high','gpt-5.1', 'gpt-5'] },
   openai_gpt1: { label: 'GGB', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.1', 'gpt-5'] },
   openai_gpt2: { label: 'infiniteai', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.1', 'gpt-5'] },
   gpt3: { label: '薄荷', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
@@ -948,7 +948,7 @@ const cacheUserAvatar = async () => {
 const sidebarCollapsed = ref(false)
 const workspacePanelVisible = ref(false)
 const selectedProvider = ref('openai')
-const selectedModel = ref('gpt-5.2')
+const selectedModel = ref('gpt-5.4-xhigh')
 const modelPopoverVisible = ref(false)
 const enableThinking = ref(false)
 const enableWebSearch = ref(false)

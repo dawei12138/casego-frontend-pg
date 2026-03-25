@@ -6,7 +6,7 @@
         <el-input
           v-model.trim="fileKeyword"
           class="file-filter"
-          placeholder="过滤文件…"
+          placeholder="Filter files..."
           clearable
           size="small"
         >
@@ -14,13 +14,17 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-tag size="small" effect="plain" class="file-count-tag">{{ fileCount }} 文件</el-tag>
+        <el-tag size="small" effect="plain" class="file-count-tag">{{ fileCount }} files</el-tag>
       </div>
 
       <div class="toolbar-right">
+        <el-button size="small" :disabled="!skillId" @click="openCreateFolderDialog">
+          <el-icon><FolderAdd /></el-icon>
+          New Folder
+        </el-button>
         <el-button size="small" :disabled="!skillId" @click="openCreateFileDialog">
           <el-icon><Plus /></el-icon>
-          新建文件
+          New File
         </el-button>
         <el-button size="small" :disabled="!skillId" :loading="fileListLoading" @click="refreshFiles">
           <el-icon><RefreshRight /></el-icon>
@@ -33,7 +37,7 @@
           :loading="savingCurrent"
           @click="saveCurrentFile"
         >
-          保存并同步
+          Save & Sync
         </el-button>
         <el-button
           size="small"
@@ -43,7 +47,7 @@
           :loading="savingBatch"
           @click="saveAllDrafts"
         >
-          批量保存并同步({{ dirtyCount }})
+          Save All ({{ dirtyCount }})
         </el-button>
       </div>
     </div>
@@ -67,13 +71,19 @@
             <template #default="{ data }">
               <span class="tree-node" :class="{ 'is-dirty': !data.isDir && isDirty(data.filePath) }">
                 <span :class="['node-icon', data.isDir ? 'is-dir' : getFileIconClass(data.label)]">
-                  {{ data.isDir ? '▸' : getFileIcon(data.label) }}
+                  {{ data.isDir ? 'DIR' : getFileIcon(data.label) }}
                 </span>
                 <span class="node-label">{{ data.label }}</span>
                 <span v-if="!data.isDir && isDirty(data.filePath)" class="dirty-dot" />
-                <span v-if="!data.isDir" class="node-actions" @click.stop>
-                  <el-icon class="node-action-btn" @click="openRenameDialog(data)"><Edit /></el-icon>
-                  <el-icon class="node-action-btn is-danger" @click="handleDeleteFile(data)"><Delete /></el-icon>
+                <span class="node-actions" @click.stop>
+                  <template v-if="data.isDir">
+                    <el-icon class="node-action-btn" @click="openRenameFolderDialog(data)"><Edit /></el-icon>
+                    <el-icon class="node-action-btn is-danger" @click="handleDeleteFolder(data)"><Delete /></el-icon>
+                  </template>
+                  <template v-else>
+                    <el-icon class="node-action-btn" @click="openRenameDialog(data)"><Edit /></el-icon>
+                    <el-icon class="node-action-btn is-danger" @click="handleDeleteFile(data)"><Delete /></el-icon>
+                  </template>
                 </span>
               </span>
             </template>
@@ -88,13 +98,13 @@
           <div class="editor-tab-bar">
             <div class="tab-info">
               <span class="tab-path">{{ activeFilePath }}</span>
-              <el-tag v-if="isActiveDirty" type="warning" size="small" effect="plain" round>已修改</el-tag>
-              <el-tag v-else type="success" size="small" effect="plain" round>已保存</el-tag>
+              <el-tag v-if="isActiveDirty" type="warning" size="small" effect="plain" round>Modified</el-tag>
+              <el-tag v-else type="success" size="small" effect="plain" round>Saved</el-tag>
             </div>
             <div class="tab-actions">
-              <el-tooltip content="切换主题" placement="bottom">
+              <el-tooltip content="Toggle theme" placement="bottom">
                 <el-button link size="small" @click="toggleTheme">
-                  <el-icon><component :is="editorTheme === 'vs-dark' ? 'Sunny' : 'Moon'" /></el-icon>
+                  <el-icon><component :is="editorTheme === 'vs-dark' ? Sunny : Moon" /></el-icon>
                 </el-button>
               </el-tooltip>
             </div>
@@ -106,7 +116,7 @@
             type="warning"
             show-icon
             :closable="false"
-            title="当前文件为二进制格式，文本编辑可能不准确。"
+            title="Current file is binary; text editing may be inaccurate."
           />
 
           <!-- Monaco editor -->
@@ -123,7 +133,7 @@
         <div v-else class="editor-placeholder">
           <div class="placeholder-content">
             <el-icon class="placeholder-icon"><Document /></el-icon>
-            <p>选择左侧文件开始编辑</p>
+            <p>Select a file to start editing</p>
           </div>
         </div>
       </main>
@@ -132,51 +142,92 @@
     <div v-else class="editor-placeholder full-placeholder">
       <div class="placeholder-content">
         <el-icon class="placeholder-icon"><FolderOpened /></el-icon>
-        <p>选择一个技能开始编辑</p>
+        <p>Select a skill to start editing</p>
       </div>
     </div>
 
     <!-- Create file dialog -->
-    <el-dialog v-model="createFileDialogVisible" title="新建文件" width="520px" append-to-body>
+    <el-dialog v-model="createFileDialogVisible" title="Create File" width="520px" append-to-body>
       <el-form ref="createFileFormRef" :model="createFileForm" :rules="createFileRules" label-position="top">
-        <el-form-item label="文件路径" prop="filePath">
-          <el-input v-model.trim="createFileForm.filePath" placeholder="例如：references/quickstart.md" />
+        <el-form-item label="File Path" prop="filePath">
+          <el-input v-model.trim="createFileForm.filePath" placeholder="e.g. references/quickstart.md" />
         </el-form-item>
-        <el-form-item label="初始内容">
-          <el-input v-model="createFileForm.content" type="textarea" :rows="6" placeholder="可选，不填则创建空文件" />
+        <el-form-item label="Initial Content">
+          <el-input v-model="createFileForm.content" type="textarea" :rows="6" placeholder="Optional" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createFileDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creatingFile" @click="confirmCreateFile">创建并打开</el-button>
+        <el-button @click="createFileDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="creatingFile" @click="confirmCreateFile">Create & Open</el-button>
       </template>
     </el-dialog>
-    <!-- Rename file dialog -->
-    <el-dialog v-model="renameDialogVisible" title="重命名文件" width="520px" append-to-body>
-      <el-form ref="renameFormRef" :model="renameForm" :rules="renameRules" label-position="top">
-        <el-form-item label="新文件路径" prop="filePath">
-          <el-input v-model.trim="renameForm.filePath" placeholder="例如：references/quickstart.md" />
+
+    <!-- Create folder dialog -->
+    <el-dialog v-model="createFolderDialogVisible" title="Create Folder" width="520px" append-to-body>
+      <el-form ref="createFolderFormRef" :model="createFolderForm" :rules="createFolderRules" label-position="top">
+        <el-form-item label="Folder Path" prop="folderPath">
+          <el-input v-model.trim="createFolderForm.folderPath" placeholder="references or references/sub" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="renameDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="renamingFile" @click="confirmRenameFile">确认重命名</el-button>
+        <el-button @click="createFolderDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="creatingFolder" @click="confirmCreateFolder">Create</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Rename/move file dialog -->
+    <el-dialog v-model="renameDialogVisible" title="Move / Rename File" width="520px" append-to-body>
+      <el-form ref="renameFormRef" :model="renameForm" :rules="renameRules" label-position="top">
+        <el-form-item label="New File Path" prop="filePath">
+          <el-input v-model.trim="renameForm.filePath" placeholder="e.g. references/quickstart.md" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="renameDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="renamingFile" @click="confirmRenameFile">Confirm</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Rename folder dialog -->
+    <el-dialog v-model="renameFolderDialogVisible" title="Rename Folder" width="520px" append-to-body>
+      <el-form ref="renameFolderFormRef" :model="renameFolderForm" :rules="renameFolderRules" label-position="top">
+        <el-form-item label="New Folder Path" prop="folderPath">
+          <el-input v-model.trim="renameFolderForm.folderPath" placeholder="references or docs" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="renameFolderDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="renamingFolder" @click="confirmRenameFolder">Confirm</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, RefreshRight, Document, FolderOpened, Sunny, Moon, Edit, Delete } from '@element-plus/icons-vue'
+import {
+  Search,
+  Plus,
+  FolderAdd,
+  RefreshRight,
+  Document,
+  FolderOpened,
+  Sunny,
+  Moon,
+  Edit,
+  Delete
+} from '@element-plus/icons-vue'
 import {
   getSkillFileContent,
   listSkillFiles,
   saveSkillFileContent,
   saveSkillFilesContent,
-  updateSkillFile,
-  delSkillFile
+  moveSkillFile,
+  delSkillFile,
+  addSkillFolder,
+  renameSkillFolder,
+  delSkillFolder
 } from '@/api/skills/skill'
 import MonacoEditor from './MonacoEditor.vue'
 
@@ -190,6 +241,7 @@ const fileContentLoading = ref(false)
 const savingCurrent = ref(false)
 const savingBatch = ref(false)
 const creatingFile = ref(false)
+const creatingFolder = ref(false)
 
 const syncAfterSingleSave = ref(true)
 const editorTheme = ref('vs')
@@ -204,56 +256,74 @@ const createFileDialogVisible = ref(false)
 const createFileFormRef = ref()
 const createFileForm = reactive({ filePath: '', content: '' })
 
+const createFolderDialogVisible = ref(false)
+const createFolderFormRef = ref()
+const createFolderForm = reactive({ folderPath: '' })
+
 const renameDialogVisible = ref(false)
 const renameFormRef = ref()
-const renameForm = reactive({ fileId: '', oldFilePath: '', filePath: '' })
+const renameForm = reactive({ oldFilePath: '', filePath: '' })
 const renamingFile = ref(false)
 
-const renameRules = {
-  filePath: [{
-    required: true,
-    trigger: 'blur',
-    validator: (_, value, callback) => {
-      const { valid, message } = validateFilePath(value)
-      if (!valid) { callback(new Error(message)); return }
-      if (normalizeFilePath(value) === renameForm.oldFilePath) {
-        callback(new Error('新路径与原路径相同')); return
-      }
-      callback()
-    }
-  }]
-}
+const renameFolderDialogVisible = ref(false)
+const renameFolderFormRef = ref()
+const renameFolderForm = reactive({ oldPath: '', folderPath: '' })
+const renamingFolder = ref(false)
 
 const treeProps = { children: 'children', label: 'label' }
 
 const FILE_ICON_MAP = {
-  md: '📝', yaml: '⚙', yml: '⚙', json: '{}',
-  js: 'JS', ts: 'TS', py: '🐍', sh: '▶',
-  html: '◇', css: '◆', xml: '◇', svg: '◇'
-}
-
-const getFileIcon = (name) => {
-  const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : ''
-  return FILE_ICON_MAP[ext] || '◻'
-}
-
-const getFileIconClass = (name) => {
-  const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : ''
-  if (['md', 'mdx'].includes(ext)) return 'is-md'
-  if (['yaml', 'yml', 'json', 'toml'].includes(ext)) return 'is-config'
-  if (['js', 'ts', 'py', 'sh', 'rb', 'go'].includes(ext)) return 'is-code'
-  return 'is-file'
+  md: 'MD',
+  yaml: 'YAML',
+  yml: 'YAML',
+  json: 'JSON',
+  js: 'JS',
+  ts: 'TS',
+  py: 'PY',
+  sh: 'SH',
+  html: 'HTML',
+  css: 'CSS',
+  xml: 'XML',
+  svg: 'SVG'
 }
 
 const normalizeFilePath = (value) => String(value || '').trim().replace(/\\/g, '/')
+const normalizeFolderPath = (value) => normalizeFilePath(value).replace(/^\/+/, '').replace(/\/+$/, '')
+
+const isFolderEntry = (item) => {
+  const type = String(item?.type || item?.entryType || '').toLowerCase()
+  return Boolean(item?.isDir || item?.isDirectory || type === 'dir' || type === 'folder')
+}
+
+const resolveEntryPath = (item, asFolder = false) => {
+  const rawPath = normalizeFilePath(item?.filePath || item?.path || item?.folderPath || '')
+  return asFolder ? normalizeFolderPath(rawPath) : rawPath
+}
+
+const isPathInFolder = (path, folderPath) => {
+  const normalizedPath = normalizeFilePath(path)
+  const normalizedFolder = normalizeFolderPath(folderPath)
+  if (!normalizedPath || !normalizedFolder) return false
+  return normalizedPath === normalizedFolder || normalizedPath.startsWith(`${normalizedFolder}/`)
+}
 
 const validateFilePath = (value) => {
   const filePath = normalizeFilePath(value)
-  if (!filePath) return { valid: false, message: '请输入文件路径' }
-  if (filePath.startsWith('/')) return { valid: false, message: '文件路径不能以 / 开头' }
-  if (filePath.endsWith('/')) return { valid: false, message: '文件路径不能以 / 结尾' }
-  if (filePath.includes('..')) return { valid: false, message: '文件路径不能包含 ..' }
-  if (/^[a-zA-Z]:/.test(filePath)) return { valid: false, message: '文件路径不能使用盘符路径' }
+  if (!filePath) return { valid: false, message: 'Please enter a file path' }
+  if (filePath.startsWith('/')) return { valid: false, message: 'File path cannot start with /' }
+  if (filePath.endsWith('/')) return { valid: false, message: 'File path cannot end with /' }
+  if (filePath.includes('..')) return { valid: false, message: 'File path cannot contain ..' }
+  if (filePath.includes('//')) return { valid: false, message: 'File path cannot contain //' }
+  if (/^[a-zA-Z]:/.test(filePath)) return { valid: false, message: 'Absolute disk path is not allowed' }
+  return { valid: true, message: '' }
+}
+
+const validateFolderPath = (value) => {
+  const folderPath = normalizeFolderPath(value)
+  if (!folderPath) return { valid: false, message: 'Please enter a folder path' }
+  if (folderPath.includes('..')) return { valid: false, message: 'Folder path cannot contain ..' }
+  if (folderPath.includes('//')) return { valid: false, message: 'Folder path cannot contain //' }
+  if (/^[a-zA-Z]:/.test(folderPath)) return { valid: false, message: 'Absolute disk path is not allowed' }
   return { valid: true, message: '' }
 }
 
@@ -263,10 +333,79 @@ const createFileRules = {
     trigger: 'blur',
     validator: (_, value, callback) => {
       const { valid, message } = validateFilePath(value)
-      if (!valid) { callback(new Error(message)); return }
+      if (!valid) {
+        callback(new Error(message))
+        return
+      }
       callback()
     }
   }]
+}
+
+const createFolderRules = {
+  folderPath: [{
+    required: true,
+    trigger: 'blur',
+    validator: (_, value, callback) => {
+      const { valid, message } = validateFolderPath(value)
+      if (!valid) {
+        callback(new Error(message))
+        return
+      }
+      callback()
+    }
+  }]
+}
+
+const renameRules = {
+  filePath: [{
+    required: true,
+    trigger: 'blur',
+    validator: (_, value, callback) => {
+      const { valid, message } = validateFilePath(value)
+      if (!valid) {
+        callback(new Error(message))
+        return
+      }
+      if (normalizeFilePath(value) === renameForm.oldFilePath) {
+        callback(new Error('New path is the same as old path'))
+        return
+      }
+      callback()
+    }
+  }]
+}
+
+const renameFolderRules = {
+  folderPath: [{
+    required: true,
+    trigger: 'blur',
+    validator: (_, value, callback) => {
+      const { valid, message } = validateFolderPath(value)
+      if (!valid) {
+        callback(new Error(message))
+        return
+      }
+      if (normalizeFolderPath(value) === renameFolderForm.oldPath) {
+        callback(new Error('New path is the same as old path'))
+        return
+      }
+      callback()
+    }
+  }]
+}
+
+const getFileIcon = (name) => {
+  const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : ''
+  return FILE_ICON_MAP[ext] || 'FILE'
+}
+
+const getFileIconClass = (name) => {
+  const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : ''
+  if (['md', 'mdx'].includes(ext)) return 'is-md'
+  if (['yaml', 'yml', 'json', 'toml'].includes(ext)) return 'is-config'
+  if (['js', 'ts', 'py', 'sh', 'rb', 'go'].includes(ext)) return 'is-code'
+  return 'is-file'
 }
 
 const sortTreeNodes = (nodes) => {
@@ -282,7 +421,7 @@ const sortTreeNodes = (nodes) => {
     }))
 }
 
-const buildFileTree = (files) => {
+const buildFileTree = (entries) => {
   const root = []
   const nodeMap = new Map()
 
@@ -293,29 +432,38 @@ const buildFileTree = (files) => {
       nodeMap.set(nodeId, node)
       parent.push(node)
     }
-    if (isDir) node.isDir = true
+    if (isDir && !node.isDir) {
+      node.isDir = true
+      node.filePath = ''
+      if (!Array.isArray(node.children)) node.children = []
+    }
     return node
   }
 
-  files.forEach((item) => {
-    const filePath = normalizeFilePath(item.filePath)
-    if (!filePath) return
-    const parts = filePath.split('/').filter(Boolean)
+  entries.forEach((item) => {
+    const entryIsDir = isFolderEntry(item)
+    const entryPath = resolveEntryPath(item, entryIsDir)
+    if (!entryPath) return
+
+    const parts = entryPath.split('/').filter(Boolean)
     let parent = root
     let currentPath = ''
+
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i]
       currentPath = currentPath ? `${currentPath}/${part}` : part
       const isLeaf = i === parts.length - 1
-      const node = ensureNode(currentPath, part, !isLeaf, parent)
+      const nodeShouldBeDir = !isLeaf || entryIsDir
+      const node = ensureNode(currentPath, part, nodeShouldBeDir, parent)
+
       if (isLeaf) {
-        node.isDir = false
-        node.filePath = filePath
+        node.isDir = nodeShouldBeDir
+        node.filePath = nodeShouldBeDir ? '' : entryPath
         node.meta = item
-        node.children = []
-      } else {
-        parent = node.children
+        if (!nodeShouldBeDir) node.children = []
       }
+
+      if (node.isDir) parent = node.children
     }
   })
 
@@ -323,7 +471,7 @@ const buildFileTree = (files) => {
 }
 
 const treeData = computed(() => buildFileTree(fileList.value))
-const fileCount = computed(() => fileList.value.length)
+const fileCount = computed(() => fileList.value.filter((item) => !isFolderEntry(item)).length)
 
 const activeDraft = computed(() => drafts[activeFilePath.value] || null)
 const isActiveDirty = computed(() => {
@@ -341,7 +489,7 @@ const isDirty = (filePath) => {
 const dirtyEntries = computed(() => {
   return Object.keys(drafts)
     .map((fp) => drafts[fp])
-    .filter((d) => d && (d.content || '') !== (d.originalContent || ''))
+    .filter((draft) => draft && (draft.content || '') !== (draft.originalContent || ''))
 })
 
 const dirtyCount = computed(() => dirtyEntries.value.length)
@@ -351,16 +499,73 @@ const canSaveCurrent = computed(() => {
   return isActiveDirty.value
 })
 
-watch(fileKeyword, (keyword) => { treeRef.value?.filter(keyword) })
-watch(treeData, async () => { await nextTick(); treeRef.value?.filter(fileKeyword.value) })
-watch(activeFilePath, async (value) => { await nextTick(); treeRef.value?.setCurrentKey(value || null) })
+const replaceSingleDraftPath = (oldPath, newPath) => {
+  if (!oldPath || !newPath || oldPath === newPath) return
+  const oldDraft = drafts[oldPath]
+  if (oldDraft) {
+    drafts[newPath] = { ...oldDraft, filePath: newPath }
+    delete drafts[oldPath]
+  }
+  if (activeFilePath.value === oldPath) {
+    activeFilePath.value = newPath
+    activeContent.value = drafts[newPath]?.content || activeContent.value
+  }
+}
+
+const replaceDraftFolderPrefix = (oldFolderPath, newFolderPath) => {
+  if (!oldFolderPath || !newFolderPath || oldFolderPath === newFolderPath) return
+  const oldPrefix = `${oldFolderPath}/`
+
+  Object.keys(drafts)
+    .filter((draftPath) => draftPath === oldFolderPath || draftPath.startsWith(oldPrefix))
+    .forEach((draftPath) => {
+      const suffix = draftPath.slice(oldFolderPath.length)
+      const nextPath = `${newFolderPath}${suffix}`
+      drafts[nextPath] = { ...drafts[draftPath], filePath: nextPath }
+      delete drafts[draftPath]
+    })
+
+  if (activeFilePath.value && isPathInFolder(activeFilePath.value, oldFolderPath)) {
+    const suffix = activeFilePath.value.slice(oldFolderPath.length)
+    const nextPath = `${newFolderPath}${suffix}`
+    activeFilePath.value = nextPath
+    activeContent.value = drafts[nextPath]?.content || activeContent.value
+  }
+}
+
+const removeDraftFolder = (folderPath) => {
+  if (!folderPath) return
+  Object.keys(drafts)
+    .filter((draftPath) => isPathInFolder(draftPath, folderPath))
+    .forEach((draftPath) => delete drafts[draftPath])
+
+  if (activeFilePath.value && isPathInFolder(activeFilePath.value, folderPath)) {
+    activeFilePath.value = ''
+    activeContent.value = ''
+  }
+}
+
+const getNodeFolderPath = (node) => normalizeFolderPath(node?.id || node?.filePath || '')
+
+watch(fileKeyword, (keyword) => {
+  treeRef.value?.filter(keyword)
+})
+
+watch(treeData, async () => {
+  await nextTick()
+  treeRef.value?.filter(fileKeyword.value)
+})
+
+watch(activeFilePath, async (value) => {
+  await nextTick()
+  treeRef.value?.setCurrentKey(value || null)
+})
 
 watch(activeContent, (value) => {
   if (!activeFilePath.value || !drafts[activeFilePath.value]) return
   drafts[activeFilePath.value].content = value ?? ''
 })
 
-// Watch skillId prop changes
 watch(() => props.skillId, async (newId, oldId) => {
   if (!newId) {
     fileList.value = []
@@ -386,20 +591,35 @@ const clearDrafts = () => {
 }
 
 const loadFileList = async () => {
-  if (!props.skillId) { fileList.value = []; clearDrafts(); return }
+  if (!props.skillId) {
+    fileList.value = []
+    clearDrafts()
+    return
+  }
+
   fileListLoading.value = true
   try {
     const res = await listSkillFiles(props.skillId)
     fileList.value = Array.isArray(res.data) ? res.data : []
-    const pathSet = new Set(fileList.value.map((item) => normalizeFilePath(item.filePath)))
-    Object.keys(drafts).forEach((fp) => { if (!pathSet.has(fp)) delete drafts[fp] })
+
+    const pathSet = new Set(
+      fileList.value
+        .filter((item) => !isFolderEntry(item))
+        .map((item) => resolveEntryPath(item, false))
+        .filter(Boolean)
+    )
+
+    Object.keys(drafts).forEach((draftPath) => {
+      if (!pathSet.has(draftPath)) delete drafts[draftPath]
+    })
+
     if (activeFilePath.value && !pathSet.has(activeFilePath.value)) {
       activeFilePath.value = ''
       activeContent.value = ''
     }
   } catch {
     fileList.value = []
-    ElMessage.error('加载文件列表失败')
+    ElMessage.error('Failed to load file list')
   } finally {
     fileListLoading.value = false
   }
@@ -414,18 +634,24 @@ const activateFile = async (filePath) => {
     activeContent.value = drafts[filePath].content || ''
     return
   }
+
   fileContentLoading.value = true
   try {
     const res = await getSkillFileContent(props.skillId, filePath)
     const data = res.data || {}
     const content = typeof data.content === 'string' ? data.content : ''
-    drafts[filePath] = { filePath, content, originalContent: content, isBinary: Boolean(data.isBinary) }
+    drafts[filePath] = {
+      filePath,
+      content,
+      originalContent: content,
+      isBinary: Boolean(data.isBinary)
+    }
     activeFilePath.value = filePath
     activeContent.value = content
   } catch {
     activeFilePath.value = ''
     activeContent.value = ''
-    ElMessage.error(`加载文件内容失败: ${filePath}`)
+    ElMessage.error(`Failed to load file content: ${filePath}`)
   } finally {
     fileContentLoading.value = false
   }
@@ -448,10 +674,10 @@ const saveCurrentFile = async () => {
     }
     const res = await saveSkillFileContent(props.skillId, payload)
     activeDraft.value.originalContent = activeDraft.value.content
-    ElMessage.success(res.msg || '保存成功')
+    ElMessage.success(res.msg || 'Saved successfully')
     await loadFileList()
   } catch {
-    ElMessage.error('保存当前文件失败')
+    ElMessage.error('Failed to save current file')
   } finally {
     savingCurrent.value = false
   }
@@ -463,18 +689,20 @@ const saveAllDrafts = async () => {
   try {
     const payload = {
       syncAll: syncAfterSingleSave.value,
-      files: dirtyEntries.value.map((d) => ({
-        filePath: d.filePath,
-        content: d.content || '',
-        isBinary: Boolean(d.isBinary)
+      files: dirtyEntries.value.map((draft) => ({
+        filePath: draft.filePath,
+        content: draft.content || '',
+        isBinary: Boolean(draft.isBinary)
       }))
     }
     const res = await saveSkillFilesContent(props.skillId, payload)
-    dirtyEntries.value.forEach((d) => { d.originalContent = d.content })
-    ElMessage.success(res.msg || '批量保存成功')
+    dirtyEntries.value.forEach((draft) => {
+      draft.originalContent = draft.content
+    })
+    ElMessage.success(res.msg || 'Saved all drafts')
     await loadFileList()
   } catch {
-    ElMessage.error('批量保存失败')
+    ElMessage.error('Failed to save drafts')
   } finally {
     savingBatch.value = false
   }
@@ -485,107 +713,234 @@ const toggleTheme = () => {
 }
 
 const openCreateFileDialog = () => {
-  if (!props.skillId) { ElMessage.warning('请先选择技能'); return }
-  createFileForm.filePath = ''
+  if (!props.skillId) {
+    ElMessage.warning('Please select a skill first')
+    return
+  }
+
+  const currentNode = treeRef.value?.getCurrentNode?.()
+  if (currentNode?.isDir) {
+    const folderPath = getNodeFolderPath(currentNode)
+    createFileForm.filePath = folderPath ? `${folderPath}/` : ''
+  } else {
+    createFileForm.filePath = ''
+  }
+
   createFileForm.content = ''
   createFileDialogVisible.value = true
 }
 
 const confirmCreateFile = async () => {
   if (!createFileFormRef.value || !props.skillId) return
-  try { await createFileFormRef.value.validate() } catch { return }
+  try {
+    await createFileFormRef.value.validate()
+  } catch {
+    return
+  }
 
   const filePath = normalizeFilePath(createFileForm.filePath)
-  const existed = fileList.value.some((item) => normalizeFilePath(item.filePath) === filePath)
+  const existed = fileList.value.some((item) => {
+    if (isFolderEntry(item)) return false
+    return resolveEntryPath(item, false) === filePath
+  })
 
   if (existed) {
     try {
-      await ElMessageBox.confirm(`文件 ${filePath} 已存在，继续将覆盖其内容，是否继续？`, '覆盖确认', {
-        type: 'warning', confirmButtonText: '继续覆盖', cancelButtonText: '取消'
-      })
-    } catch { return }
+      await ElMessageBox.confirm(
+        `File ${filePath} already exists. Continue and overwrite?`,
+        'Overwrite Confirmation',
+        { type: 'warning', confirmButtonText: 'Overwrite', cancelButtonText: 'Cancel' }
+      )
+    } catch {
+      return
+    }
   }
 
   creatingFile.value = true
   try {
     await saveSkillFileContent(props.skillId, {
-      filePath, content: createFileForm.content || '', isBinary: false, syncAll: false
+      filePath,
+      content: createFileForm.content || '',
+      isBinary: false,
+      syncAll: false
     })
+
     drafts[filePath] = {
-      filePath, content: createFileForm.content || '',
-      originalContent: createFileForm.content || '', isBinary: false
+      filePath,
+      content: createFileForm.content || '',
+      originalContent: createFileForm.content || '',
+      isBinary: false
     }
+
     createFileDialogVisible.value = false
-    ElMessage.success(existed ? '文件已覆盖' : '文件已创建')
+    ElMessage.success(existed ? 'File overwritten' : 'File created')
     await loadFileList()
     await activateFile(filePath)
   } catch {
-    ElMessage.error(existed ? '覆盖文件失败' : '创建文件失败')
+    ElMessage.error(existed ? 'Failed to overwrite file' : 'Failed to create file')
   } finally {
     creatingFile.value = false
   }
 }
 
+const openCreateFolderDialog = () => {
+  if (!props.skillId) {
+    ElMessage.warning('Please select a skill first')
+    return
+  }
+
+  const currentNode = treeRef.value?.getCurrentNode?.()
+  createFolderForm.folderPath = currentNode?.isDir ? getNodeFolderPath(currentNode) : ''
+  createFolderDialogVisible.value = true
+}
+
+const confirmCreateFolder = async () => {
+  if (!createFolderFormRef.value || !props.skillId) return
+  try {
+    await createFolderFormRef.value.validate()
+  } catch {
+    return
+  }
+
+  const folderPath = normalizeFolderPath(createFolderForm.folderPath)
+  creatingFolder.value = true
+  try {
+    const res = await addSkillFolder(props.skillId, { folderPath })
+    createFolderDialogVisible.value = false
+    ElMessage.success(res.msg || 'Folder created')
+    await loadFileList()
+  } catch {
+    ElMessage.error('Failed to create folder')
+  } finally {
+    creatingFolder.value = false
+  }
+}
+
 const openRenameDialog = (node) => {
-  renameForm.fileId = node.meta?.fileId || ''
-  renameForm.oldFilePath = node.filePath
-  renameForm.filePath = node.filePath
+  renameForm.oldFilePath = normalizeFilePath(node.filePath)
+  renameForm.filePath = normalizeFilePath(node.filePath)
   renameDialogVisible.value = true
 }
 
 const confirmRenameFile = async () => {
   if (!renameFormRef.value || !props.skillId) return
-  try { await renameFormRef.value.validate() } catch { return }
+  try {
+    await renameFormRef.value.validate()
+  } catch {
+    return
+  }
 
+  const oldPath = normalizeFilePath(renameForm.oldFilePath)
   const newPath = normalizeFilePath(renameForm.filePath)
+
   renamingFile.value = true
   try {
-    await updateSkillFile(props.skillId, {
-      fileId: renameForm.fileId,
-      filePath: newPath
-    })
-    // Update draft references
-    const oldPath = renameForm.oldFilePath
-    if (drafts[oldPath]) {
-      drafts[newPath] = { ...drafts[oldPath], filePath: newPath }
-      delete drafts[oldPath]
-    }
-    if (activeFilePath.value === oldPath) {
-      activeFilePath.value = newPath
-    }
+    await moveSkillFile(props.skillId, { oldPath, newPath })
+    replaceSingleDraftPath(oldPath, newPath)
     renameDialogVisible.value = false
-    ElMessage.success('重命名成功')
+    ElMessage.success('File moved successfully')
     await loadFileList()
   } catch {
-    ElMessage.error('重命名失败')
+    ElMessage.error('Failed to move file')
   } finally {
     renamingFile.value = false
+  }
+}
+
+const openRenameFolderDialog = (node) => {
+  const folderPath = getNodeFolderPath(node)
+  if (!folderPath) return
+
+  renameFolderForm.oldPath = folderPath
+  renameFolderForm.folderPath = folderPath
+  renameFolderDialogVisible.value = true
+}
+
+const confirmRenameFolder = async () => {
+  if (!renameFolderFormRef.value || !props.skillId) return
+  try {
+    await renameFolderFormRef.value.validate()
+  } catch {
+    return
+  }
+
+  const oldPath = normalizeFolderPath(renameFolderForm.oldPath)
+  const newPath = normalizeFolderPath(renameFolderForm.folderPath)
+
+  renamingFolder.value = true
+  try {
+    const res = await renameSkillFolder(props.skillId, { oldPath, newPath })
+    replaceDraftFolderPrefix(oldPath, newPath)
+    renameFolderDialogVisible.value = false
+    ElMessage.success(res.msg || 'Folder renamed successfully')
+    await loadFileList()
+  } catch {
+    ElMessage.error('Failed to rename folder')
+  } finally {
+    renamingFolder.value = false
   }
 }
 
 const handleDeleteFile = async (node) => {
   const fileId = node.meta?.fileId
   if (!fileId || !props.skillId) return
+
   try {
     await ElMessageBox.confirm(
-      `确认删除文件「${node.filePath}」吗？`,
-      '删除确认',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+      `Delete file ${node.filePath}?`,
+      'Delete Confirmation',
+      {
+        type: 'warning',
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonClass: 'el-button--danger'
+      }
     )
-  } catch { return }
+  } catch {
+    return
+  }
 
   try {
     await delSkillFile(props.skillId, fileId)
-    // Clean up draft
     if (drafts[node.filePath]) delete drafts[node.filePath]
     if (activeFilePath.value === node.filePath) {
       activeFilePath.value = ''
       activeContent.value = ''
     }
-    ElMessage.success('删除成功')
+    ElMessage.success('File deleted')
     await loadFileList()
   } catch {
-    ElMessage.error('删除文件失败')
+    ElMessage.error('Failed to delete file')
+  }
+}
+
+const handleDeleteFolder = async (node) => {
+  if (!props.skillId) return
+  const folderPath = getNodeFolderPath(node)
+  if (!folderPath) return
+
+  try {
+    await ElMessageBox.confirm(
+      `Delete folder ${folderPath}?`,
+      'Delete Confirmation',
+      {
+        type: 'warning',
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    const res = await delSkillFolder(props.skillId, { folderPath })
+    removeDraftFolder(folderPath)
+    ElMessage.success(res.msg || 'Folder deleted')
+    await loadFileList()
+  } catch {
+    ElMessage.error('Failed to delete folder')
   }
 }
 
