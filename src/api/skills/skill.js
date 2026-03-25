@@ -88,6 +88,32 @@ export function getSkillFileContent(skillId, filePath) {
   })
 }
 
+// 淇濆瓨鍗曚釜鎶€鑳芥枃浠跺唴瀹癸紙鎸塮ilePath upsert锛?
+export function saveSkillFileContent(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/file/content',
+    method: 'put',
+    data: data
+  })
+}
+
+// 鎵归噺淇濆瓨鎶€鑳芥枃浠跺唴瀹癸紙鎸塮ilePath upsert锛?
+export function saveSkillFilesContent(skillId, data) {
+  return request({
+    url: '/skills/skill/' + skillId + '/files/content',
+    method: 'put',
+    data: data
+  })
+}
+
+// 鎵嬪姩瑙﹀彂鎶€鑳藉叏閲忓悓姝?
+export function syncAllSkills() {
+  return request({
+    url: '/skills/skill/sync-all',
+    method: 'post'
+  })
+}
+
 // 新增技能文件
 export function addSkillFile(skillId, data) {
   return request({

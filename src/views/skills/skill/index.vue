@@ -1,189 +1,134 @@
 <template>
-  <div class="skill-page">
-    <header class="skill-header">
-      <div class="header-top">
-        <div class="header-copy">
-          <p class="header-kicker">Skill Library</p>
-          <h1 class="header-title">技能中心</h1>
-          <p class="header-desc">查看、筛选和导入技能包，快速搭建你的技能能力集</p>
-        </div>
+  <div class="skill-ide">
+    <!-- Slim header bar -->
+    <header class="ide-header">
+      <div class="header-left">
+        <h1 class="ide-title">技能编辑器</h1>
         <div class="header-stats">
-          <div class="stat-chip">
-            <span class="stat-value">{{ total }}</span>
-            <span class="stat-label">总技能</span>
-          </div>
-          <div class="stat-chip stat-chip--success">
-            <span class="stat-value">{{ enabledCount }}</span>
-            <span class="stat-label">已启用</span>
-          </div>
-          <div class="stat-chip stat-chip--info">
-            <span class="stat-value">{{ importedCount }}</span>
-            <span class="stat-label">已导入</span>
-          </div>
+          <span class="stat-item">{{ total }} 技能</span>
+          <span class="stat-sep">·</span>
+          <span class="stat-item stat-enabled">{{ enabledCount }} 启用</span>
         </div>
       </div>
+      <div class="header-actions">
+        <el-button size="small" class="header-btn" @click="openImport">
+          <el-icon><Upload /></el-icon>
+          导入
+        </el-button>
+        <el-button size="small" class="header-btn" type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          新建技能
+        </el-button>
+        <el-button size="small" class="header-btn" type="warning" plain :loading="syncingAll" @click="triggerSyncAll">
+          <el-icon><Refresh /></el-icon>
+          全量同步
+        </el-button>
+      </div>
+    </header>
 
-      <div class="header-toolbar">
-        <div class="toolbar-left">
+    <!-- IDE body: skill list | file editor (tree + monaco) -->
+    <div class="ide-body">
+      <!-- Left: skill list panel -->
+      <aside class="skill-list-panel" v-loading="loading">
+        <div class="panel-search">
           <el-input
             v-model="queryParams.skillName"
-            class="search-input"
-            placeholder="搜索技能名称…"
+            placeholder="搜索技能…"
             clearable
+            size="small"
             @keyup.enter="handleQuery"
+            @clear="handleQuery"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-select
-            v-model="queryParams.enabled"
-            class="status-select"
-            placeholder="全部状态"
-            clearable
-            @change="handleQuery"
-          >
-            <el-option label="已启用" :value="true" />
-            <el-option label="已禁用" :value="false" />
-          </el-select>
-          <el-button text class="reset-btn" @click="resetQuery">
-            <el-icon><RefreshRight /></el-icon>
-            重置
-          </el-button>
         </div>
-        <div class="toolbar-right">
-          <el-button class="action-btn action-btn--secondary" @click="openImport">
-            <el-icon><Upload /></el-icon>
-            导入
-          </el-button>
-          <el-button class="action-btn action-btn--primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            新建技能
-          </el-button>
-        </div>
-      </div>
-    </header>
 
-    <div v-loading="loading" class="skill-grid">
-      <template v-if="skillList.length">
-        <article
-          v-for="skill in skillList"
-          :key="skill.skillId"
-          class="skill-card"
-          :class="{ 'is-disabled': !skill.enabled }"
-        >
-          <div class="card-head">
-            <div class="card-icon" :class="getIconClass(skill.sourceType)">
-              <el-icon><Tools /></el-icon>
-            </div>
-            <div class="card-head-right">
-              <span class="status-dot" :class="skill.enabled ? 'is-active' : 'is-inactive'" />
-              <el-dropdown trigger="click" @command="(cmd) => handleCardAction(cmd, skill)">
-                <el-button link class="card-menu">
-                  <el-icon><MoreFilled /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">
-                      <el-icon><Edit /></el-icon>
-                      编辑
-                    </el-dropdown-item>
-                    <el-dropdown-item command="toggle">
-                      <el-icon><Switch /></el-icon>
-                      {{ skill.enabled ? '禁用' : '启用' }}
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" divided>
-                      <el-icon><Delete /></el-icon>
-                      删除
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </div>
-
-          <h3 class="card-title">{{ skill.displayName || skill.skillName }}</h3>
-          <p class="card-desc">{{ skill.description || '暂无描述' }}</p>
-
-          <div class="card-foot">
-            <el-tag
-              :type="getSourceTagType(skill.sourceType)"
-              size="small"
-              effect="plain"
-              round
-              class="source-tag"
+        <el-scrollbar class="skill-scroll">
+          <div class="skill-items">
+            <div
+              v-for="skill in skillList"
+              :key="skill.skillId"
+              class="skill-item"
+              :class="{
+                'is-active': selectedSkillId === skill.skillId,
+                'is-disabled': !skill.enabled
+              }"
+              @click="selectSkill(skill)"
             >
-              {{ getSourceLabel(skill.sourceType) }}
-            </el-tag>
-            <span class="card-time">{{ skill.updateTime ? formatTime(skill.updateTime) : '-' }}</span>
+              <div class="skill-item-main">
+                <span class="skill-status-dot" :class="skill.enabled ? 'is-on' : 'is-off'" />
+                <span class="skill-item-name">{{ skill.displayName || skill.skillName }}</span>
+              </div>
+              <div class="skill-item-sub">
+                <span class="skill-item-code">{{ skill.skillName }}</span>
+                <el-dropdown trigger="click" size="small" @command="(cmd) => handleCardAction(cmd, skill)">
+                  <span class="skill-item-more" @click.stop>
+                    <el-icon><MoreFilled /></el-icon>
+                  </span>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="edit">
+                        <el-icon><Edit /></el-icon>
+                        编辑属性
+                      </el-dropdown-item>
+                      <el-dropdown-item command="toggle">
+                        <el-icon><Switch /></el-icon>
+                        {{ skill.enabled ? '禁用' : '启用' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item command="delete" divided>
+                        <el-icon><Delete /></el-icon>
+                        删除
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+
+            <div v-if="!loading && skillList.length === 0" class="skill-empty-hint">
+              暂无技能
+            </div>
           </div>
-        </article>
-      </template>
+        </el-scrollbar>
 
-      <div v-else-if="!loading" class="skill-empty">
-        <div class="empty-visual">
-          <el-icon class="empty-icon"><FolderOpened /></el-icon>
+        <!-- Pagination -->
+        <div v-if="total > queryParams.pageSize" class="skill-list-pager">
+          <el-pagination
+            v-model:current-page="queryParams.pageNum"
+            :page-size="queryParams.pageSize"
+            :total="total"
+            layout="prev, next"
+            small
+            @current-change="getList"
+          />
         </div>
-        <p class="empty-title">暂无技能</p>
-        <p class="empty-desc">点击「新建技能」或「导入」开始添加</p>
-        <div class="empty-actions">
-          <el-button class="action-btn action-btn--primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>
-            新建技能
-          </el-button>
-        </div>
-      </div>
+      </aside>
+
+      <!-- Right: file editor -->
+      <SkillFileEditor ref="editorRef" :skill-id="selectedSkillId" />
     </div>
 
-    <div class="skill-pagination" v-if="total > 0">
-      <el-pagination
-        v-model:current-page="queryParams.pageNum"
-        v-model:page-size="queryParams.pageSize"
-        :total="total"
-        :page-sizes="[12, 24, 48, 96]"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="getList"
-        @current-change="getList"
-      />
-    </div>
-
-    <!-- 新建/编辑 Dialog -->
+    <!-- Create/Edit skill dialog -->
     <el-dialog
       v-model="open"
       :title="dialogTitle"
-      width="560px"
+      width="520px"
       class="skill-dialog"
       :close-on-click-modal="false"
     >
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-position="top"
-        class="skill-form"
-      >
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="skill-form">
         <el-form-item label="技能目录名" prop="skillName">
-          <el-input
-            v-model="form.skillName"
-            placeholder="例如：my-skill"
-            :disabled="!!form.skillId"
-          />
+          <el-input v-model="form.skillName" placeholder="例如：my-skill" :disabled="!!form.skillId" />
           <span class="form-hint">技能唯一标识，创建后不可修改</span>
         </el-form-item>
-
         <el-form-item label="显示名称" prop="displayName">
           <el-input v-model="form.displayName" placeholder="例如：我的技能" />
         </el-form-item>
-
         <el-form-item label="描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="简要描述技能用途"
-          />
+          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="简要描述技能用途" />
         </el-form-item>
-
         <div class="form-row">
           <el-form-item label="是否启用" class="form-row-item">
             <el-switch v-model="form.enabled" />
@@ -193,18 +138,17 @@
           </el-form-item>
         </div>
       </el-form>
-
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="cancel" class="cancel-btn">取消</el-button>
-          <el-button type="primary" @click="submitForm" :loading="submitLoading" class="action-btn action-btn--primary">
+          <el-button @click="cancel">取消</el-button>
+          <el-button type="primary" @click="submitForm" :loading="submitLoading">
             {{ form.skillId ? '保存' : '创建' }}
           </el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 导入 Dialog -->
+    <!-- Import dialog -->
     <el-dialog
       v-model="importOpen"
       title="导入技能"
@@ -231,52 +175,25 @@
             </div>
           </el-upload>
           <div class="dialog-footer import-footer">
-            <el-button @click="cancelImport" class="cancel-btn">取消</el-button>
-            <el-button
-              type="primary"
-              @click="handleZipImport"
-              :loading="submitLoading"
-              :disabled="!zipFile"
-              class="action-btn action-btn--primary"
-            >
+            <el-button @click="cancelImport">取消</el-button>
+            <el-button type="primary" @click="handleZipImport" :loading="submitLoading" :disabled="!zipFile">
               导入
             </el-button>
           </div>
         </el-tab-pane>
 
         <el-tab-pane label="从 URL 导入" name="url">
-          <el-form
-            ref="importFormRef"
-            :model="importForm"
-            :rules="importRules"
-            label-position="top"
-            class="skill-form"
-          >
+          <el-form ref="importFormRef" :model="importForm" :rules="importRules" label-position="top" class="skill-form">
             <el-form-item label="技能包 URL" prop="url">
-              <el-input
-                v-model="importForm.url"
-                placeholder="https://example.com/skill.zip"
-                clearable
-              />
-              <span class="form-hint">请输入可访问的 ZIP 包地址</span>
+              <el-input v-model="importForm.url" placeholder="https://example.com/skill.zip" clearable />
             </el-form-item>
             <el-form-item label="技能名称（可选）">
-              <el-input
-                v-model="importForm.skillName"
-                placeholder="留空则使用包内名称"
-                clearable
-              />
+              <el-input v-model="importForm.skillName" placeholder="留空则使用包内名称" clearable />
             </el-form-item>
           </el-form>
           <div class="dialog-footer import-footer">
-            <el-button @click="cancelImport" class="cancel-btn">取消</el-button>
-            <el-button
-              type="primary"
-              @click="handleUrlImport"
-              :loading="submitLoading"
-              :disabled="!importForm.url"
-              class="action-btn action-btn--primary"
-            >
+            <el-button @click="cancelImport">取消</el-button>
+            <el-button type="primary" @click="handleUrlImport" :loading="submitLoading" :disabled="!importForm.url">
               导入
             </el-button>
           </div>
@@ -287,12 +204,15 @@
 </template>
 
 <script setup name="Skill">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, nextTick } from 'vue'
 import {
-  Search, Plus, Upload, FolderOpened, Tools, MoreFilled,
-  Edit, Switch, Delete, UploadFilled, RefreshRight
+  Search, Plus, Upload, MoreFilled,
+  Edit, Switch, Delete, UploadFilled, Refresh
 } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSkillManagement } from './index.js'
+import { syncAllSkills } from '@/api/skills/skill'
+import SkillFileEditor from './components/SkillFileEditor.vue'
 
 const {
   skillList,
@@ -310,11 +230,8 @@ const {
   rules,
   importForm,
   importRules,
-  getSourceLabel,
-  getSourceTagType,
   getList,
   handleQuery,
-  resetQuery,
   cancel,
   handleAdd,
   handleUpdate,
@@ -325,22 +242,49 @@ const {
   handleUpload,
   handleUrlImport,
   handleToggleEnabled,
-  formatTime
 } = useSkillManagement()
 
 const enabledCount = computed(() => skillList.value.filter(item => item.enabled).length)
-const importedCount = computed(() => skillList.value.filter(item => ['upload', 'url'].includes(item.sourceType)).length)
 
+const selectedSkillId = ref('')
+const editorRef = ref()
 const uploadRef = ref()
 const zipFile = ref(null)
+const syncingAll = ref(false)
 
-const onZipFileChange = (file) => {
-  zipFile.value = file
+const selectSkill = async (skill) => {
+  if (selectedSkillId.value === skill.skillId) return
+
+  // Check if editor has unsaved changes
+  if (editorRef.value?.dirtyCount > 0 && selectedSkillId.value) {
+    try {
+      await ElMessageBox.confirm(
+        '当前技能有未保存内容，切换后将丢失本地修改，是否继续？',
+        '切换确认',
+        { type: 'warning', confirmButtonText: '继续切换', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+  }
+
+  selectedSkillId.value = skill.skillId
 }
 
-const onZipFileRemove = () => {
-  zipFile.value = null
+const handleCardAction = (command, skill) => {
+  switch (command) {
+    case 'edit': handleUpdate(skill); break
+    case 'toggle': handleToggleEnabled(skill); break
+    case 'delete': handleDelete(skill).then(() => {
+      if (selectedSkillId.value === skill.skillId) {
+        selectedSkillId.value = ''
+      }
+    }); break
+  }
 }
+
+const onZipFileChange = (file) => { zipFile.value = file }
+const onZipFileRemove = () => { zipFile.value = null }
 
 const handleZipImport = async () => {
   if (!zipFile.value) return
@@ -349,28 +293,31 @@ const handleZipImport = async () => {
   uploadRef.value?.clearFiles()
 }
 
-const getIconClass = (sourceType) => {
-  const map = { manual: 'icon--blue', upload: 'icon--green', url: 'icon--amber' }
-  return map[sourceType] || 'icon--blue'
-}
+const triggerSyncAll = async () => {
+  if (syncingAll.value) return
+  try {
+    await ElMessageBox.confirm(
+      '将触发所有启用技能的全量落盘同步，是否继续？',
+      '同步确认',
+      { type: 'warning', confirmButtonText: '立即同步', cancelButtonText: '取消' }
+    )
+  } catch { return }
 
-const handleCardAction = (command, skill) => {
-  switch (command) {
-    case 'edit':
-      handleUpdate(skill)
-      break
-    case 'toggle':
-      handleToggleEnabled(skill)
-      break
-    case 'delete':
-      handleDelete(skill)
-      break
-    default:
-      break
+  syncingAll.value = true
+  try {
+    const res = await syncAllSkills()
+    const result = res.data || {}
+    ElMessage.success(`全量同步完成：${result.synced ?? '-'}/${result.total ?? '-'}`)
+  } catch {
+    ElMessage.error('全量同步失败')
+  } finally {
+    syncingAll.value = false
   }
 }
 
 onMounted(() => {
+  // 加载更多技能以填充列表
+  queryParams.value.pageSize = 50
   getList()
 })
 </script>
