@@ -1,6 +1,6 @@
 <template>
   <div class="case-editor">
-    <div v-if="loading" class="loading-container">
+    <div v-if="loading && !currentCaseData" class="loading-container">
       <el-icon class="is-loading">
         <Loading />
       </el-icon>
@@ -16,6 +16,13 @@
 
     <!-- 请求配置区域 -->
     <div v-else class="editor-container">
+      <div v-if="loading" class="loading-overlay">
+        <el-icon class="is-loading">
+          <Loading />
+        </el-icon>
+        <span>加载用例详情...</span>
+      </div>
+
       <RequestSection
         ref="requestSectionRef"
         :case-data="currentCaseData"
@@ -129,15 +136,37 @@ const showHistoryDrawer = ref(false)
 
 // 保存操作锁，防止并发保存
 const isSaving = ref(false)
+let caseDetailRequestSeq = 0
 
 // 当前用例数据
 const currentCaseData = computed(() => {
   return caseDetailData.value || props.caseData
 })
 
+const runAfterPaint = (callback) => {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(callback)
+  })
+}
+
+const scheduleComponentReload = (caseData, requestSeq) => {
+  nextTick(() => {
+    runAfterPaint(() => {
+      if (requestSeq !== caseDetailRequestSeq) return
+
+      if (requestSectionRef.value?.reloadAllComponents) {
+        requestSectionRef.value.reloadAllComponents(caseData).catch(error => {
+          console.error('Deferred component reload failed:', error)
+        })
+      }
+    })
+  })
+}
+
 // 加载用例详情
 const loadCaseDetail = async (caseId, silent = false) => {
   if (!caseId) return
+  const requestSeq = ++caseDetailRequestSeq
   
   if (!silent) {
     loading.value = true
@@ -146,20 +175,21 @@ const loadCaseDetail = async (caseId, silent = false) => {
   try {
     console.log('Loading case detail for caseId:', caseId)
     const response = await getTestCase(caseId)
+    if (requestSeq !== caseDetailRequestSeq) {
+      console.log('Ignoring stale case detail response for caseId:', caseId)
+      return
+    }
     
     if (response && response.code === 200) {
       caseDetailData.value = response.data
       console.log('Case detail loaded successfully:', response.data)
-      
-      // 数据加载完成后，确保所有子组件重新初始化
-      await nextTick()
-      if (requestSectionRef.value?.reloadAllComponents) {
-        requestSectionRef.value.reloadAllComponents(response.data)
-      }
+      scheduleComponentReload(response.data, requestSeq)
     } else {
       throw new Error(response?.msg || '加载用例详情失败')
     }
   } catch (error) {
+    if (requestSeq !== caseDetailRequestSeq) return
+
     console.error('Failed to load case detail:', error)
     if (!silent) {
       ElMessage.error(`加载用例详情失败: ${error.message}`)
@@ -169,7 +199,7 @@ const loadCaseDetail = async (caseId, silent = false) => {
       caseDetailData.value = { ...props.caseData }
     }
   } finally {
-    if (!silent) {
+    if (!silent && requestSeq === caseDetailRequestSeq) {
       loading.value = false
     }
   }
