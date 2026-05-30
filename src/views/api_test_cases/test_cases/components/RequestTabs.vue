@@ -1,10 +1,10 @@
 <template>
-  <div class="request-tabs">
+  <div class="request-tabs" data-testid="testcase.tabs.root">
     <el-tabs v-model="activeTab" type="card" class="request-tabs-container">
       <!-- 查询参数 -->
       <el-tab-pane label="查询参数" name="params">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.params">
             查询参数
             <el-badge 
               v-if="enabledParamsCount > 0" 
@@ -24,7 +24,7 @@
       <!-- 请求头 -->
       <el-tab-pane label="请求头" name="headers">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.headers">
             请求头
             <el-badge 
               v-if="enabledHeadersCount > 0" 
@@ -44,7 +44,7 @@
       <!-- Cookies -->
       <el-tab-pane label="Cookies" name="cookies">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.cookies">
             Cookies
             <el-badge 
               v-if="enabledCookiesCount > 0" 
@@ -63,6 +63,9 @@
       
       <!-- 请求体 -->
       <el-tab-pane label="请求体" name="body">
+        <template #label>
+          <span class="tab-label" data-testid="testcase.tabs.body">请求体</span>
+        </template>
         <RequestBody
           ref="requestBodyRef"
           :key="`body-${caseData.caseId || 'new'}-${componentKey}`"
@@ -79,7 +82,7 @@
       <!-- 前置脚本 -->
       <el-tab-pane label="前置脚本" name="pre-scripts">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.pre-scripts">
             前置脚本
             <el-badge 
               v-if="enabledSetupCount > 0" 
@@ -100,7 +103,7 @@
       <!-- 后置脚本 -->
       <el-tab-pane label="后置脚本" name="post-scripts">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.post-scripts">
             后置脚本
             <el-badge 
               v-if="enabledTeardownCount > 0" 
@@ -121,7 +124,7 @@
       <!-- 断言 -->
       <el-tab-pane label="断言" name="assertions">
         <template #label>
-          <span class="tab-label">
+          <span class="tab-label" data-testid="testcase.tabs.assertions">
             断言
             <el-badge 
               v-if="enabledAssertionsCount > 0" 

@@ -1,5 +1,5 @@
 <template>
-  <div class="post-response-scripts">
+  <div class="post-response-scripts" data-testid="testcase.post.root">
     <!-- 脚本列表 -->
     <div v-if="internalTeardownList.filter(s => s.delFlag !== '1').length > 0" class="scripts-list">
       <draggable 
@@ -14,11 +14,11 @@
         :group="{ name: 'scripts', pull: false, put: false }"
       >
         <template #item="{ element: script, index }">
-          <div v-show="script.delFlag !== '1'" class="script-item" :key="script.teardownId">
+          <div v-show="script.delFlag !== '1'" class="script-item" :data-testid="`testcase.post.row.${index}`" :key="script.teardownId">
             <!-- 脚本头部 -->
-            <div class="script-header" @click="toggleScriptExpand(script)">
+            <div class="script-header" :data-testid="`testcase.post.row.${index}.header`" @click="toggleScriptExpand(script)">
               <div class="script-info">
-                <span class="drag-handle">⋮⋮</span>
+                <span class="drag-handle" :data-testid="`testcase.post.row.${index}.drag`">⋮⋮</span>
                 <div class="script-badge" :class="getScriptBadgeClass(script.teardownType)">
                   {{ getDisplayIndex(script) }}
                 </div>
@@ -28,13 +28,14 @@
               </div>
               <div class="script-controls">
                 <el-switch
+                  :data-testid="`testcase.post.row.${index}.enabled`"
                   v-model="script.isRun"
                   :active-value="true"
                   :inactive-value="false"
                   size="small"
                   @click.stop
                 />
-                <el-button size="small" text type="danger" @click.stop="removeScript(script)">
+                <el-button size="small" text type="danger" :data-testid="`testcase.post.row.${index}.delete`" @click.stop="removeScript(script)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
                 <el-icon class="expand-icon" :class="{ 'is-expanded': script.expanded }">
@@ -49,12 +50,12 @@
               <div v-if="script.teardownType === 'EXTRACT_VARIABLE'" class="config-content">
                 <div class="config-row">
                   <label class="config-label">操作名称</label>
-                  <el-input v-model="script.name" placeholder="请输入操作名称" size="small" />
+                  <el-input v-model="script.name" :data-testid="`testcase.post.row.${index}.extract.name`" placeholder="请输入操作名称" size="small" />
                 </div>
                 
                 <div class="config-row">
                   <label class="config-label">提取方法</label>
-                  <el-select v-model="script.extractVariableMethod" size="small" style="width: 200px;" @change="handleExtractMethodChange(script)">
+                  <el-select v-model="script.extractVariableMethod" :data-testid="`testcase.post.row.${index}.extract.method`" size="small" style="width: 200px;" @change="handleExtractMethodChange(script)">
                     <el-option label="响应JSON" value="response_json" />
                     <el-option label="响应文本" value="response_text" />
                     <el-option label="响应XML" value="response_xml" />
@@ -68,12 +69,13 @@
                   <div class="config-row">
                     <label class="config-label">JSONPath</label>
                     <el-input 
+                      :data-testid="`testcase.post.row.${index}.extract.jsonpath`"
                       v-model="script.jsonpath" 
                       placeholder="$.data.token" 
                       size="small"
                     >
                       <template #append>
-                        <el-button size="small" @click="showJsonPathHelp">
+                        <el-button size="small" :data-testid="`testcase.post.row.${index}.extract.jsonpath.help`" @click="showJsonPathHelp">
                           <el-icon><QuestionFilled /></el-icon>
                         </el-button>
                       </template>
@@ -84,12 +86,14 @@
                     <label class="config-label">提取索引</label>
                     <div class="index-config">
                       <el-switch
+                        :data-testid="`testcase.post.row.${index}.extract-index.enabled`"
                         v-model="script.extractIndexIsRun"
                         size="small"
                       />
                       <span class="index-label">启用索引</span>
                       <el-input-number
                         v-if="script.extractIndexIsRun"
+                        :data-testid="`testcase.post.row.${index}.extract-index.value`"
                         v-model="script.extractIndex"
                         :min="0"
                         size="small"
@@ -104,6 +108,7 @@
                 <div v-else-if="script.extractVariableMethod === 'response_text'" class="config-row">
                   <label class="config-label">正则表达式</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.extract.regex`"
                     v-model="script.regularExpression" 
                     placeholder="请输入正则表达式" 
                     size="small"
@@ -114,6 +119,7 @@
                 <div v-else-if="script.extractVariableMethod === 'response_xml'" class="config-row">
                   <label class="config-label">XPath表达式</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.extract.xpath`"
                     v-model="script.xpathExpression" 
                     placeholder="请输入XPath表达式" 
                     size="small"
@@ -124,6 +130,7 @@
                 <div v-else-if="script.extractVariableMethod === 'response_header'" class="config-row">
                   <label class="config-label">响应头名称</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.extract.response-header`"
                     v-model="script.responseHeader" 
                     placeholder="请输入响应头名称" 
                     size="small"
@@ -134,6 +141,7 @@
                 <div v-else-if="script.extractVariableMethod === 'response_cookie'" class="config-row">
                   <label class="config-label">Cookie名称</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.extract.response-cookie`"
                     v-model="script.responseCookie" 
                     placeholder="请输入Cookie名称" 
                     size="small"
@@ -143,7 +151,7 @@
                 <!-- 变量名 (所有方法都需要) -->
                 <div class="config-row">
                   <label class="config-label">变量名</label>
-                  <el-input v-model="script.variableName" placeholder="token" size="small" />
+                  <el-input v-model="script.variableName" :data-testid="`testcase.post.row.${index}.extract.variable-name`" placeholder="token" size="small" />
                 </div>
               </div>
               
@@ -152,6 +160,7 @@
                 <div class="config-row">
                   <label class="config-label">操作名称</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.db.name`"
                     v-model="script.name" 
                     placeholder="请输入操作名称" 
                     size="small"
@@ -163,6 +172,7 @@
                 <div class="config-row">
                   <label class="config-label">数据库连接</label>
                   <el-select 
+                    :data-testid="`testcase.post.row.${index}.db.connection`"
                     v-model="script.databaseId" 
                     size="small"
                     :loading="loadingDatabases"
@@ -184,6 +194,7 @@
                 <div class="config-row full-width">
                   <label class="config-label">数据库操作</label>
                   <el-input 
+                    :data-testid="`testcase.post.row.${index}.db.operation`"
                     v-model="script.dbOperation" 
                     type="textarea" 
                     :rows="4" 
@@ -199,7 +210,7 @@
                 <div class="extract-variables-section">
                   <div class="section-header">
                     <label class="config-label">提取变量</label>
-                    <el-button size="small" type="primary" text @click="handleAddExtractVariable(script)">
+                    <el-button size="small" type="primary" text :data-testid="`testcase.post.row.${index}.extract.add`" @click="handleAddExtractVariable(script)">
                       <el-icon><Plus /></el-icon>
                       添加变量提取
                     </el-button>
@@ -216,6 +227,7 @@
                           <div class="extract-field">
                             <label class="extract-label">变量名</label>
                             <el-input 
+                              :data-testid="`testcase.post.row.${index}.extract.${varIndex}.variable-name`"
                               v-model="extractVar.variable_name" 
                               placeholder="user_id" 
                               size="small" 
@@ -227,6 +239,7 @@
                           <div class="extract-field">
                             <label class="extract-label">JSONPath</label>
                             <el-input 
+                              :data-testid="`testcase.post.row.${index}.extract.${varIndex}.jsonpath`"
                               v-model="extractVar.jsonpath" 
                               placeholder="$.data[0].id" 
                               size="small" 
@@ -238,6 +251,7 @@
 
                           <div class="extract-actions">
                             <el-button 
+                              :data-testid="`testcase.post.row.${index}.extract.${varIndex}.delete`"
                               size="small" 
                               text 
                               type="danger" 
@@ -261,7 +275,7 @@
               <div v-else-if="['PYTHON_SCRIPT', 'JS_SCRIPT'].includes(script.teardownType)" class="config-content">
                 <div class="config-row">
                   <label class="config-label">操作名称</label>
-                  <el-input v-model="script.name" placeholder="请输入脚本名称" size="small" />
+                  <el-input v-model="script.name" :data-testid="`testcase.post.row.${index}.script.name`" placeholder="请输入脚本名称" size="small" />
                 </div>
                 <div class="config-row full-width">
                   <label class="config-label">脚本内容</label>
@@ -269,7 +283,7 @@
                     <div class="editor-toolbar">
                       <div class="toolbar-left">
                         <el-dropdown trigger="click" @command="(cmd) => insertSnippet(cmd, script)">
-                          <el-button size="small">
+                          <el-button size="small" :data-testid="`testcase.post.row.${index}.script.snippets`">
                             <el-icon><DocumentCopy /></el-icon>
                             代码片段
                             <el-icon class="el-icon--right"><ArrowDown /></el-icon>
@@ -282,6 +296,7 @@
                                   v-for="item in category.items"
                                   :key="item.name"
                                   :command="item.code"
+                                  :data-testid="`testcase.post.row.${index}.script.snippet.${item.name}`"
                                   class="snippet-item"
                                 >
                                   {{ item.name }}
@@ -290,7 +305,7 @@
                             </el-dropdown-menu>
                           </template>
                         </el-dropdown>
-                        <el-button size="small" @click.stop="clearScriptContent(script)">
+                        <el-button size="small" :data-testid="`testcase.post.row.${index}.script.clear`" @click.stop="clearScriptContent(script)">
                           <el-icon><Delete /></el-icon>
                           清空
                         </el-button>
@@ -299,6 +314,7 @@
                         <el-button
                           size="small"
                           type="primary"
+                          :data-testid="`testcase.post.row.${index}.script.debug`"
                           :loading="script.debugLoading"
                           @click.stop="handleDebugScript(script)"
                         >
@@ -309,11 +325,12 @@
                     </div>
                     <div class="monaco-editor-wrapper" :class="{ 'is-fullscreen': isScriptFullscreen(script) }">
                       <div class="monaco-fullscreen-toolbar">
-                        <el-button size="small" :icon="isScriptFullscreen(script) ? Close : FullScreen" @click.stop="toggleScriptFullscreen(script)">
+                        <el-button size="small" :data-testid="`testcase.post.row.${index}.script.fullscreen`" :icon="isScriptFullscreen(script) ? Close : FullScreen" @click.stop="toggleScriptFullscreen(script)">
                           {{ isScriptFullscreen(script) ? '退出全屏' : '全屏' }}
                         </el-button>
                       </div>
                       <div
+                        :data-testid="`testcase.post.row.${index}.script.editor`"
                         :ref="(el) => setEditorRef(el, script)"
                         class="monaco-editor-container"
                       ></div>
@@ -328,7 +345,7 @@
                       <el-tag :type="script.debugResult.success ? 'success' : 'danger'" size="small">
                         {{ script.debugResult.success ? '执行成功' : '执行失败' }}
                       </el-tag>
-                      <el-button size="small" text type="info" @click.stop="script.debugResult = null">
+                      <el-button size="small" text type="info" :data-testid="`testcase.post.row.${index}.script.debug.close`" @click.stop="script.debugResult = null">
                         <el-icon><Close /></el-icon>
                         关闭
                       </el-button>
@@ -355,12 +372,13 @@
               <div v-else-if="script.teardownType === 'WAIT_TIME'" class="config-content">
                 <div class="config-row">
                   <label class="config-label">操作名称</label>
-                  <el-input v-model="script.name" placeholder="请输入操作名称" size="small" />
+                  <el-input v-model="script.name" :data-testid="`testcase.post.row.${index}.wait.name`" placeholder="请输入操作名称" size="small" />
                 </div>
                 <div class="config-row">
                   <label class="config-label">等待时间</label>
                   <div class="wait-time-input">
                     <el-input-number 
+                      :data-testid="`testcase.post.row.${index}.wait.time`"
                       v-model="script.waitTime" 
                       :min="0" 
                       size="small" 
@@ -382,7 +400,7 @@
     <!-- 添加按钮 -->
     <div class="add-section">
       <el-dropdown @command="addScript" placement="bottom-start">
-        <div class="add-button">
+        <div class="add-button" data-testid="testcase.post.action.add">
           <el-icon><Plus /></el-icon>
           <span>添加后置操作</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
@@ -393,6 +411,7 @@
               v-for="type in scriptTypes" 
               :key="type.value" 
               :command="type.value"
+              :data-testid="`testcase.post.menu.${type.value}`"
               class="script-type-item"
             >
               <div class="type-icon" :class="getScriptBadgeClass(type.value)"></div>
@@ -404,7 +423,7 @@
     </div>
 
     <!-- JSONPath帮助对话框 -->
-    <el-dialog v-model="showJsonPathDialog" title="JSONPath 语法帮助" width="600px">
+    <el-dialog v-model="showJsonPathDialog" title="JSONPath 语法帮助" width="600px" data-testid="testcase.post.jsonpath-help.root">
       <div class="jsonpath-help">
         <h4>常用 JSONPath 表达式：</h4>
         <ul class="help-list">
@@ -417,7 +436,7 @@
         </ul>
       </div>
       <template #footer>
-        <el-button @click="showJsonPathDialog = false">关闭</el-button>
+        <el-button data-testid="testcase.post.jsonpath-help.action.close" @click="showJsonPathDialog = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>

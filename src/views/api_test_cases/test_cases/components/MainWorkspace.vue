@@ -1,10 +1,11 @@
 <template>
-  <div class="main-workspace">
+  <div class="main-workspace" data-testid="testcase.workspace.root">
     <!-- 标签页管理器 -->
-    <div class="tabs-container" v-if="tabs.length > 0">
+      <div class="tabs-container" v-if="tabs.length > 0">
       <!-- 标签页头部 - 标签导航 + 环境选择器在同一行 -->
       <div class="tabs-header-row">
         <el-tabs
+          data-testid="testcase.workspace.tabs"
           v-model="activeTabId"
           type="card"
           closable
@@ -40,6 +41,7 @@
         <!-- 环境控制栏 - 固定在右侧 -->
         <div class="environment-controls">
           <el-select
+            data-testid="testcase.workspace.tabs.environment.select"
             v-model="selectedEnvironmentId"
             placeholder="选择环境"
             size="small"
@@ -56,6 +58,7 @@
           </el-select>
 
           <el-button
+            data-testid="testcase.workspace.tabs.environment.configure"
             size="small"
             @click="showEnvironmentConfig = true"
           >
@@ -67,10 +70,11 @@
       <!-- 标签页内容区域 -->
       <div class="tabs-content-area">
         <div
-          v-for="tab in tabs"
+          v-for="(tab, index) in tabs"
           :key="tab.id"
           v-show="tab.id === activeTabId"
           class="tab-content-panel"
+          :data-testid="`testcase.workspace.tab.${index}.panel`"
         >
           <CaseEditor
             :case-data="tab.data"
@@ -89,6 +93,7 @@
       <div class="empty-header">
         <div class="environment-controls">
           <el-select
+            data-testid="testcase.workspace.empty.environment.select"
             v-model="selectedEnvironmentId"
             placeholder="选择环境"
             size="small"
@@ -105,6 +110,7 @@
           </el-select>
 
           <el-button
+            data-testid="testcase.workspace.empty.environment.configure"
             size="small"
             @click="showEnvironmentConfig = true"
           >
@@ -122,11 +128,11 @@
         </p>
         
         <div class="empty-actions">
-          <el-button type="primary" @click="handleCreateNewCase" :loading="createCaseLoading">
+          <el-button type="primary" data-testid="testcase.workspace.empty.create-case" @click="handleCreateNewCase" :loading="createCaseLoading">
             <el-icon v-if="!createCaseLoading"><Plus /></el-icon>
             {{ createCaseLoading ? '创建中...' : '创建新用例' }}
           </el-button>
-          <el-button @click="handleImportCase">
+          <el-button data-testid="testcase.workspace.empty.import-case" @click="handleImportCase">
             <el-icon><Upload /></el-icon>
             导入用例
           </el-button>
@@ -142,6 +148,7 @@
     />
     <!-- 右键菜单 -->
     <el-dropdown
+      data-testid="testcase.workspace.tab-context.root"
       ref="tabContextMenuRef"
       trigger="contextmenu"
       :teleported="false"
@@ -150,27 +157,27 @@
       <span></span>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="save">
+          <el-dropdown-item command="save" data-testid="testcase.workspace.tab-context.save">
             <el-icon><DocumentChecked /></el-icon>
             保存
           </el-dropdown-item>
-          <el-dropdown-item command="save-as">
+          <el-dropdown-item command="save-as" data-testid="testcase.workspace.tab-context.save-as">
             <el-icon><DocumentCopy /></el-icon>
             另存为
           </el-dropdown-item>
-          <el-dropdown-item divided command="duplicate">
+          <el-dropdown-item divided command="duplicate" data-testid="testcase.workspace.tab-context.duplicate">
             <el-icon><CopyDocument /></el-icon>
             复制标签页
           </el-dropdown-item>
-          <el-dropdown-item command="close">
+          <el-dropdown-item command="close" data-testid="testcase.workspace.tab-context.close">
             <el-icon><Close /></el-icon>
             关闭
           </el-dropdown-item>
-          <el-dropdown-item command="close-others">
+          <el-dropdown-item command="close-others" data-testid="testcase.workspace.tab-context.close-others">
             <el-icon><CloseBold /></el-icon>
             关闭其他
           </el-dropdown-item>
-          <el-dropdown-item command="close-all">
+          <el-dropdown-item command="close-all" data-testid="testcase.workspace.tab-context.close-all">
             <el-icon><CircleClose /></el-icon>
             关闭所有
           </el-dropdown-item>

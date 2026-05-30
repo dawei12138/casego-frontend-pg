@@ -1,5 +1,5 @@
 <template>
-  <div class="assertions">
+  <div class="assertions" data-testid="testcase.assertions.root">
     <!-- 断言列表 -->
     <div v-if="internalAssertionList.filter(s => s.delFlag !== '1').length > 0" class="assertions-list">
       <draggable 
@@ -14,11 +14,11 @@
         :group="{ name: 'assertions', pull: false, put: false }"
       >
         <template #item="{ element: assertion, index }">
-          <div v-show="assertion.delFlag !== '1'" class="assertion-item" :key="assertion.assertionId">
+          <div v-show="assertion.delFlag !== '1'" class="assertion-item" :data-testid="`testcase.assertions.row.${index}`" :key="assertion.assertionId">
             <!-- 断言头部 -->
-            <div class="assertion-header" @click="assertion.expanded = !assertion.expanded">
+            <div class="assertion-header" :data-testid="`testcase.assertions.row.${index}.header`" @click="assertion.expanded = !assertion.expanded">
               <div class="assertion-info">
-                <span class="drag-handle">⋮⋮</span>
+                <span class="drag-handle" :data-testid="`testcase.assertions.row.${index}.drag`">⋮⋮</span>
                 <div class="assertion-badge">
                   {{ getDisplayIndex(assertion) }}
                 </div>
@@ -28,13 +28,14 @@
               </div>
               <div class="assertion-controls">
                 <el-switch 
+                  :data-testid="`testcase.assertions.row.${index}.enabled`"
                   v-model="assertion.isRun" 
                   :active-value="true" 
                   :inactive-value="false" 
                   size="small" 
                   @click.stop 
                 />
-                <el-button size="small" text type="danger" @click.stop="removeAssertion(assertion)">
+                <el-button size="small" text type="danger" :data-testid="`testcase.assertions.row.${index}.delete`" @click.stop="removeAssertion(assertion)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
                 <el-icon class="expand-icon" :class="{ 'is-expanded': assertion.expanded }">
@@ -48,12 +49,12 @@
               <div class="config-content">
                 <div class="config-row">
                   <label class="config-label">断言描述</label>
-                  <el-input v-model="assertion.description" placeholder="请输入断言描述" size="small" />
+                  <el-input v-model="assertion.description" :data-testid="`testcase.assertions.row.${index}.description`" placeholder="请输入断言描述" size="small" />
                 </div>
                 
                 <div class="config-row">
                   <label class="config-label">断言对象</label>
-                  <el-select v-model="assertion.assertionMethod" size="small" style="width: 200px;">
+                  <el-select v-model="assertion.assertionMethod" :data-testid="`testcase.assertions.row.${index}.method`" size="small" style="width: 200px;">
                     <el-option label="响应文本" value="response_text" />
                     <el-option label="响应JSON" value="response_json" />
                     <el-option label="响应XML" value="response_xml" />
@@ -67,12 +68,13 @@
                 <div class="config-row" v-if="needsJsonPath(assertion.assertionMethod)">
                   <label class="config-label">{{ getJsonPathLabel(assertion.assertionMethod) }}</label>
                   <el-input
+                    :data-testid="`testcase.assertions.row.${index}.path`"
                     v-model="assertion.jsonpath"
                     :placeholder="getJsonPathPlaceholder(assertion.assertionMethod)"
                     size="small"
                   >
                     <template #append v-if="assertion.assertionMethod === 'response_json'">
-                      <el-button size="small" @click="showJsonPathHelp">
+                      <el-button size="small" :data-testid="`testcase.assertions.row.${index}.jsonpath.help`" @click="showJsonPathHelp">
                         <el-icon><QuestionFilled /></el-icon>
                       </el-button>
                     </template>
@@ -81,7 +83,7 @@
                 
                 <div class="config-row">
                   <label class="config-label">断言类型</label>
-                  <el-select v-model="assertion.assertType" size="small" style="width: 160px;">
+                  <el-select v-model="assertion.assertType" :data-testid="`testcase.assertions.row.${index}.assert-type`" size="small" style="width: 160px;">
                     <el-option label="等于 (=)" value="=" />
                     <el-option label="不等于 (!=)" value="!=" />
                     <el-option label="存在" value="exist" />
@@ -103,6 +105,7 @@
                 <div class="config-row" v-if="needsExpectedValue(assertion.assertType)">
                   <label class="config-label">期望值</label>
                   <el-input 
+                    :data-testid="`testcase.assertions.row.${index}.expected`"
                     v-model="assertion.value" 
                     :placeholder="getValuePlaceholder(assertion.assertType)" 
                     size="small" 
@@ -113,12 +116,14 @@
                   <label class="config-label">提取索引</label>
                   <div class="index-config">
                     <el-switch
+                      :data-testid="`testcase.assertions.row.${index}.extract-index.enabled`"
                       v-model="assertion.extractIndexIsRun"
                       size="small"
                     />
                     <span class="index-label">启用索引</span>
                     <el-input-number
                       v-if="assertion.extractIndexIsRun"
+                      :data-testid="`testcase.assertions.row.${index}.extract-index.value`"
                       v-model="assertion.jsonpathIndex"
                       :min="0"
                       size="small"
@@ -137,7 +142,7 @@
     <!-- 添加按钮 -->
     <div class="add-section">
       <el-dropdown @command="addAssertion" placement="bottom-start">
-        <div class="add-button">
+        <div class="add-button" data-testid="testcase.assertions.action.add">
           <el-icon><Plus /></el-icon>
           <span>添加断言</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
@@ -148,6 +153,7 @@
               v-for="type in assertionMethods" 
               :key="type.value" 
               :command="type.value"
+              :data-testid="`testcase.assertions.menu.${type.value}`"
               class="assertion-type-item"
             >
               <div class="type-icon assertion-icon"></div>
@@ -159,7 +165,7 @@
     </div>
 
     <!-- JSONPath帮助对话框 -->
-    <el-dialog v-model="showJsonPathDialog" title="JSONPath 语法帮助" width="600px">
+    <el-dialog v-model="showJsonPathDialog" title="JSONPath 语法帮助" width="600px" data-testid="testcase.assertions.jsonpath-help.root">
       <div class="jsonpath-help">
         <h4>常用 JSONPath 表达式：</h4>
         <ul class="help-list">
@@ -172,7 +178,7 @@
         </ul>
       </div>
       <template #footer>
-        <el-button @click="showJsonPathDialog = false">关闭</el-button>
+        <el-button data-testid="testcase.assertions.jsonpath-help.action.close" @click="showJsonPathDialog = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>

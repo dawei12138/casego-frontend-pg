@@ -1,5 +1,5 @@
 <template>
-  <div class="execution-history">
+  <div class="execution-history" data-testid="testcase.history.root">
     <!-- 头部操作栏 -->
     <div class="history-header">
       <div class="header-title">
@@ -12,6 +12,7 @@
         </el-tag>
         <span v-else class="no-data-hint">暂无记录</span>
         <el-button
+          data-testid="testcase.history.action.refresh"
           :icon="Refresh"
           size="small"
           @click="refreshHistory"
@@ -20,6 +21,7 @@
           刷新
         </el-button>
         <el-button
+          data-testid="testcase.history.action.close"
           size="small"
           type="primary"
           @click="handleClose"
@@ -48,9 +50,10 @@
       <div v-else class="history-list-container">
         <div class="history-list">
           <div
-            v-for="record in historyList"
+            v-for="(record, index) in historyList"
             :key="record.logId"
             class="history-card"
+            :data-testid="`testcase.history.row.${index}`"
             :class="{ 'is-success': record.isSuccess, 'is-failed': !record.isSuccess }"
             @click="showExecutionDetail(record)"
           >
@@ -116,6 +119,7 @@
       <!-- 分页 -->
       <div class="pagination-wrapper" v-if="total > 0">
         <el-pagination
+          data-testid="testcase.history.pagination"
           v-model:current-page="queryParams.pageNum"
           v-model:page-size="queryParams.pageSize"
           :page-sizes="[10, 20, 50, 100]"
@@ -130,6 +134,7 @@
 
     <!-- 执行详情弹窗 -->
     <el-dialog
+      data-testid="testcase.history.detail.root"
       v-model="showDetailDialog"
       title="执行详情"
       width="80%"

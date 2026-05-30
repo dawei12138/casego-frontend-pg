@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    data-testid="testcase.import.har.root"
     v-model="dialogVisible"
     :title="currentStep === 'config' ? '导入 HAR 文件' : '预览导入内容'"
     width="800px"
@@ -7,11 +8,12 @@
     @close="handleClose"
   >
     <!-- 步骤1: 配置参数 -->
-    <div v-if="currentStep === 'config'" class="import-config">
-      <el-form :model="configForm" label-width="100px" class="config-form">
+    <div v-if="currentStep === 'config'" class="import-config" data-testid="testcase.import.har.config">
+      <el-form :model="configForm" label-width="100px" class="config-form" data-testid="testcase.import.har.config.form">
         <!-- 文件上传 -->
         <el-form-item label="HAR 文件">
           <el-upload
+            data-testid="testcase.import.har.file"
             ref="uploadRef"
             :auto-upload="false"
             :on-change="handleFileChange"
@@ -36,6 +38,7 @@
         <!-- 目标模块 -->
         <el-form-item label="目标模块">
           <el-tree-select
+            data-testid="testcase.import.har.target-module"
             v-model="configForm.targetModuleId"
             :data="moduleTreeOptions"
             :props="{ label: 'name', value: 'moduleId' }"
@@ -49,6 +52,7 @@
         <!-- 新模块名称 -->
         <el-form-item v-if="!configForm.targetModuleId" label="模块名称">
           <el-input
+            data-testid="testcase.import.har.module-name"
             v-model="configForm.moduleName"
             :placeholder="defaultModuleName"
             clearable
@@ -58,7 +62,7 @@
 
         <!-- 过滤选项折叠面板 -->
         <el-divider content-position="left">
-          <span class="divider-text" @click="showFilterOptions = !showFilterOptions">
+          <span class="divider-text" data-testid="testcase.import.har.filter.toggle" @click="showFilterOptions = !showFilterOptions">
             过滤选项
             <el-icon :class="{ 'is-rotated': showFilterOptions }">
               <CaretRight />
@@ -70,21 +74,21 @@
           <div v-show="showFilterOptions" class="filter-options">
             <!-- 过滤静态资源 -->
             <el-form-item label="">
-              <el-checkbox v-model="configForm.filterStatic">
+              <el-checkbox v-model="configForm.filterStatic" data-testid="testcase.import.har.filter.static">
                 过滤静态资源（图片、CSS、JS、字体等）
               </el-checkbox>
             </el-form-item>
 
             <!-- 允许的HTTP方法 -->
             <el-form-item label="允许方法">
-              <el-checkbox-group v-model="configForm.allowedMethods">
-                <el-checkbox label="GET">GET</el-checkbox>
-                <el-checkbox label="POST">POST</el-checkbox>
-                <el-checkbox label="PUT">PUT</el-checkbox>
-                <el-checkbox label="DELETE">DELETE</el-checkbox>
-                <el-checkbox label="PATCH">PATCH</el-checkbox>
-                <el-checkbox label="HEAD">HEAD</el-checkbox>
-                <el-checkbox label="OPTIONS">OPTIONS</el-checkbox>
+              <el-checkbox-group v-model="configForm.allowedMethods" data-testid="testcase.import.har.allowed-methods">
+                <el-checkbox label="GET" data-testid="testcase.import.har.allowed-methods.get">GET</el-checkbox>
+                <el-checkbox label="POST" data-testid="testcase.import.har.allowed-methods.post">POST</el-checkbox>
+                <el-checkbox label="PUT" data-testid="testcase.import.har.allowed-methods.put">PUT</el-checkbox>
+                <el-checkbox label="DELETE" data-testid="testcase.import.har.allowed-methods.delete">DELETE</el-checkbox>
+                <el-checkbox label="PATCH" data-testid="testcase.import.har.allowed-methods.patch">PATCH</el-checkbox>
+                <el-checkbox label="HEAD" data-testid="testcase.import.har.allowed-methods.head">HEAD</el-checkbox>
+                <el-checkbox label="OPTIONS" data-testid="testcase.import.har.allowed-methods.options">OPTIONS</el-checkbox>
               </el-checkbox-group>
               <div class="form-tip">不选择表示允许全部方法</div>
             </el-form-item>
@@ -92,6 +96,7 @@
             <!-- 域名过滤 -->
             <el-form-item label="域名过滤">
               <el-select
+                data-testid="testcase.import.har.include-domains"
                 v-model="configForm.includeDomains"
                 multiple
                 filterable
@@ -108,6 +113,7 @@
             <!-- URL 关键词过滤 -->
             <el-form-item label="URL关键词">
               <el-select
+                data-testid="testcase.import.har.url-keywords"
                 v-model="configForm.urlKeywords"
                 multiple
                 filterable
@@ -125,7 +131,7 @@
 
         <!-- 导入选项折叠面板 -->
         <el-divider content-position="left">
-          <span class="divider-text" @click="showImportOptions = !showImportOptions">
+          <span class="divider-text" data-testid="testcase.import.har.import-options.toggle" @click="showImportOptions = !showImportOptions">
             导入选项
             <el-icon :class="{ 'is-rotated': showImportOptions }">
               <CaretRight />
@@ -136,11 +142,11 @@
         <el-collapse-transition>
           <div v-show="showImportOptions" class="import-options">
             <el-form-item label="导入内容">
-              <el-checkbox-group v-model="configForm.importOptions">
-                <el-checkbox label="headers">Headers</el-checkbox>
-                <el-checkbox label="params">Params</el-checkbox>
-                <el-checkbox label="body">请求体</el-checkbox>
-                <el-checkbox label="cookies">Cookies</el-checkbox>
+              <el-checkbox-group v-model="configForm.importOptions" data-testid="testcase.import.har.import-options">
+                <el-checkbox label="headers" data-testid="testcase.import.har.import-options.headers">Headers</el-checkbox>
+                <el-checkbox label="params" data-testid="testcase.import.har.import-options.params">Params</el-checkbox>
+                <el-checkbox label="body" data-testid="testcase.import.har.import-options.body">请求体</el-checkbox>
+                <el-checkbox label="cookies" data-testid="testcase.import.har.import-options.cookies">Cookies</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
           </div>
@@ -149,7 +155,7 @@
     </div>
 
     <!-- 步骤2: 预览 -->
-    <div v-else class="import-preview">
+    <div v-else class="import-preview" data-testid="testcase.import.har.preview">
       <!-- 统计信息 -->
       <div class="preview-info">
         <div class="info-header">
@@ -181,9 +187,10 @@
 
       <!-- 批量操作 -->
       <div class="batch-actions">
-        <el-button size="small" @click="handleSelectAll">全选</el-button>
-        <el-button size="small" @click="handleSelectNone">全不选</el-button>
+        <el-button size="small" data-testid="testcase.import.har.preview.action.select-all" @click="handleSelectAll">全选</el-button>
+        <el-button size="small" data-testid="testcase.import.har.preview.action.select-none" @click="handleSelectNone">全不选</el-button>
         <el-select
+          data-testid="testcase.import.har.preview.filter.domain"
           v-model="filterDomain"
           placeholder="按域名筛选"
           clearable
@@ -199,6 +206,7 @@
           />
         </el-select>
         <el-select
+          data-testid="testcase.import.har.preview.filter.method"
           v-model="filterMethod"
           placeholder="按方法筛选"
           clearable
@@ -219,11 +227,12 @@
       <div class="api-list-container">
         <el-checkbox-group v-model="checkedApis">
           <div
-            v-for="api in filteredApiList"
+            v-for="(api, index) in filteredApiList"
             :key="api.id"
             class="api-item"
+            :data-testid="`testcase.import.har.preview.api.${index}`"
           >
-            <el-checkbox :label="api.id" class="api-checkbox">
+            <el-checkbox :label="api.id" class="api-checkbox" :data-testid="`testcase.import.har.preview.api.${index}.checkbox`">
               <span class="method-tag" :class="api.method?.toLowerCase()">
                 {{ api.method }}
               </span>
@@ -244,14 +253,16 @@
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
+        <el-button data-testid="testcase.import.har.action.cancel" @click="handleClose">取消</el-button>
         <el-button
           v-if="currentStep === 'preview'"
+          data-testid="testcase.import.har.action.back"
           @click="handleBack"
         >
           上一步
         </el-button>
         <el-button
+          data-testid="testcase.import.har.action.next"
           type="primary"
           :loading="loading"
           @click="handleNext"

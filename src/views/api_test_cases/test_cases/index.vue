@@ -1,8 +1,9 @@
 <template>
-  <div class="app-container" :class="{ 'dark': globalState.settings.theme === 'dark' }">
+  <div class="app-container" data-testid="testcase.page.root" :class="{ 'dark': globalState.settings.theme === 'dark' }">
     <!-- 主要内容区域 -->
     <div class="app-content">
       <splitpanes
+        data-testid="testcase.page.splitpanes"
         class="default-theme"
         :dbl-click-splitter="false"
         resizerStyle="background-color: #e4e7ed; width: 4px;"

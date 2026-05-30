@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    data-testid="testcase.response.add-assertion.root"
     v-model="dialogVisible"
     title="添加断言"
     width="600px"
@@ -7,6 +8,7 @@
     :before-close="handleClose"
   >
     <el-form
+      data-testid="testcase.response.add-assertion.form"
       ref="formRef"
       :model="formData"
       :rules="rules"
@@ -15,12 +17,13 @@
     >
       <el-form-item label="JSONPath" prop="jsonpath">
         <el-input
+          data-testid="testcase.response.add-assertion.jsonpath"
           v-model="formData.jsonpath"
           placeholder="请输入 JSONPath 表达式"
           clearable
         >
           <template #append>
-            <el-button @click="testJsonPath" :disabled="!formData.jsonpath">
+            <el-button data-testid="testcase.response.add-assertion.action.test-jsonpath" @click="testJsonPath" :disabled="!formData.jsonpath">
               测试
             </el-button>
           </template>
@@ -49,6 +52,7 @@
 
       <el-form-item label="断言类型" prop="assertType">
         <el-select
+          data-testid="testcase.response.add-assertion.assert-type"
           v-model="formData.assertType"
           placeholder="请选择断言类型"
           style="width: 100%"
@@ -73,6 +77,7 @@
         v-if="!['is_null', 'is_not_null'].includes(formData.assertType)"
       >
         <el-input
+          data-testid="testcase.response.add-assertion.expected"
           v-model="formData.value"
           placeholder="请输入期望值"
           clearable
@@ -83,6 +88,7 @@
 
       <el-form-item label="额外提取索引">
         <el-switch
+          data-testid="testcase.response.add-assertion.extract-index.enabled"
           v-model="extractIndexEnabled"
           active-text="启用"
           inactive-text="禁用"
@@ -95,6 +101,7 @@
         prop="jsonpathIndex"
       >
         <el-input-number
+          data-testid="testcase.response.add-assertion.extract-index.value"
           v-model="formData.jsonpathIndex"
           :min="0"
           :max="9999"
@@ -104,8 +111,8 @@
     </el-form>
 
     <template #footer>
-      <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
+      <el-button data-testid="testcase.response.add-assertion.action.cancel" @click="handleClose">取消</el-button>
+      <el-button data-testid="testcase.response.add-assertion.action.confirm" type="primary" @click="handleSubmit" :loading="submitLoading">
         确定
       </el-button>
     </template>

@@ -1,13 +1,13 @@
 <template>
-  <div class="case-editor">
-    <div v-if="loading && !currentCaseData" class="loading-container">
+  <div class="case-editor" data-testid="testcase.editor.root">
+    <div v-if="loading && !currentCaseData" class="loading-container" data-testid="testcase.editor.loading">
       <el-icon class="is-loading">
         <Loading />
       </el-icon>
       <span>加载用例详情...</span>
     </div>
     
-    <div v-else-if="!currentCaseData" class="empty-container">
+    <div v-else-if="!currentCaseData" class="empty-container" data-testid="testcase.editor.empty">
       <el-icon class="empty-icon">
         <Document />
       </el-icon>
@@ -15,8 +15,8 @@
     </div>
 
     <!-- 请求配置区域 -->
-    <div v-else class="editor-container">
-      <div v-if="loading" class="loading-overlay">
+    <div v-else class="editor-container" data-testid="testcase.editor.container">
+      <div v-if="loading" class="loading-overlay" data-testid="testcase.editor.loading-overlay">
         <el-icon class="is-loading">
           <Loading />
         </el-icon>
@@ -35,6 +35,7 @@
       
       <!-- 响应抽屉 -->
       <el-drawer
+        data-testid="testcase.editor.response-drawer"
         v-model="showResponseDrawer"
         title="响应结果"
         direction="rtl"
@@ -50,8 +51,8 @@
               响应结果
             </h3>
             <div class="drawer-actions">
-              <el-button size="small" @click="clearResponse">清空</el-button>
-              <el-button size="small" type="primary" @click="showResponseDrawer = false">
+              <el-button size="small" data-testid="testcase.editor.response.clear" @click="clearResponse">清空</el-button>
+              <el-button size="small" type="primary" data-testid="testcase.editor.response.close" @click="showResponseDrawer = false">
                 关闭
               </el-button>
             </div>
@@ -69,6 +70,7 @@
       
       <!-- 历史记录抽屉 -->
       <el-drawer
+        data-testid="testcase.editor.history-drawer"
         v-model="showHistoryDrawer"
         direction="rtl"
         size="65%"

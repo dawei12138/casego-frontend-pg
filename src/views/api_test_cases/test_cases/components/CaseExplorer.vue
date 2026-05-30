@@ -1,5 +1,5 @@
 <template>
-  <div class="case-explorer">
+  <div class="case-explorer" data-testid="testcase.explorer.root">
     <!-- 工具栏 -->
     <div class="explorer-header">
       <div class="header-title">
@@ -8,29 +8,29 @@
       </div>
       <div class="header-actions">
         <el-tooltip content="新建用例组" placement="top">
-          <el-button size="small" text @click="handleCreateGroup">
+          <el-button size="small" text data-testid="testcase.explorer.action.create-group" @click="handleCreateGroup">
             <el-icon><FolderAdd /></el-icon>
           </el-button>
         </el-tooltip>
         <el-tooltip content="新建用例" placement="top">
-          <el-button size="small" text @click="handleCreateCase">
+          <el-button size="small" text data-testid="testcase.explorer.action.create-case" @click="handleCreateCase">
             <el-icon><DocumentAdd /></el-icon>
           </el-button>
         </el-tooltip>
         <el-tooltip content="导入用例" placement="top">
-          <el-button size="small" text @click="handleImport">
+          <el-button size="small" text data-testid="testcase.explorer.action.import" @click="handleImport">
             <el-icon><Upload /></el-icon>
           </el-button>
         </el-tooltip>
         <el-dropdown @command="handleMoreActions">
-          <el-button size="small" text>
+          <el-button size="small" text data-testid="testcase.explorer.action.more">
             <el-icon><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="export">导出用例</el-dropdown-item>
-              <el-dropdown-item command="refresh">刷新</el-dropdown-item>
-              <el-dropdown-item divided command="settings">设置</el-dropdown-item>
+              <el-dropdown-item command="export" data-testid="testcase.explorer.menu.export">导出用例</el-dropdown-item>
+              <el-dropdown-item command="refresh" data-testid="testcase.explorer.menu.refresh">刷新</el-dropdown-item>
+              <el-dropdown-item divided command="settings" data-testid="testcase.explorer.menu.settings">设置</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -40,6 +40,7 @@
     <!-- 搜索框 -->
     <div class="search-section">
       <el-input
+        data-testid="testcase.explorer.search.keyword"
         v-model="searchKeyword"
         placeholder="搜索用例..."
         size="small"
@@ -62,6 +63,7 @@
       </div>
       <el-tree
         v-else
+        data-testid="testcase.explorer.tree"
         ref="treeRef"
         :data="filteredTreeData"
         :props="treeProps"
@@ -77,10 +79,11 @@
         @node-click="handleNodeClick"
       >
         <template #default="{ node, data }">
-          <div class="tree-node" @mouseenter="handleNodeMouseEnter(data)" @mouseleave="handleNodeMouseLeave(data)">
+          <div class="tree-node" :data-testid="`testcase.explorer.node.${data.id}`" :data-node-id="data.id" @mouseenter="handleNodeMouseEnter(data)" @mouseleave="handleNodeMouseLeave(data)">
             <div 
               v-if="hasChildren(data)"
               class="expand-icon"
+              :data-testid="`testcase.explorer.node.${data.id}.expand`"
               @click.stop="toggleNodeExpansion(node, data)"
             >
               <el-icon :class="{ 'is-expanded': node.expanded }">
@@ -122,6 +125,7 @@
             >
               <template v-if="data.type === 'group'">
                 <el-button
+                  :data-testid="`testcase.explorer.node.${data.id}.action.add-case`"
                   size="small"
                   text
                   type="primary"
@@ -138,6 +142,7 @@
                   @visible-change="(visible) => handleDropdownVisibleChange(visible, data)"
                 >
                   <el-button
+                    :data-testid="`testcase.explorer.node.${data.id}.action.more`"
                     size="small"
                     text
                     class="hover-action-btn"
@@ -147,15 +152,15 @@
                   </el-button>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item command="add-submodule">
+                      <el-dropdown-item command="add-submodule" :data-testid="`testcase.explorer.node.${data.id}.menu.add-submodule`">
                         <el-icon><FolderAdd /></el-icon>
                         新增子模块
                       </el-dropdown-item>
-                      <el-dropdown-item command="rename">
+                      <el-dropdown-item command="rename" :data-testid="`testcase.explorer.node.${data.id}.menu.rename`">
                         <el-icon><Edit /></el-icon>
                         重命名
                       </el-dropdown-item>
-                      <el-dropdown-item command="delete" type="danger">
+                      <el-dropdown-item command="delete" type="danger" :data-testid="`testcase.explorer.node.${data.id}.menu.delete`">
                         <el-icon><Delete /></el-icon>
                         删除模块
                       </el-dropdown-item>
@@ -166,6 +171,7 @@
               
               <template v-else-if="data.type === 'case'">
                 <el-button
+                  :data-testid="`testcase.explorer.node.${data.id}.action.edit`"
                   size="small"
                   text
                   class="hover-action-btn"
@@ -174,6 +180,7 @@
                   <el-icon><Edit /></el-icon>
                 </el-button>
                 <el-button
+                  :data-testid="`testcase.explorer.node.${data.id}.action.delete`"
                   size="small"
                   text
                   type="danger"
@@ -199,6 +206,7 @@
 
     <!-- 导入类型选择对话框 -->
     <el-dialog
+      data-testid="testcase.explorer.import-dialog"
       v-model="importDialogVisible"
       title="导入用例"
       width="500px"
@@ -207,6 +215,7 @@
       <div class="import-type-selection">
         <div
           class="import-type-card"
+          data-testid="testcase.explorer.import.openapi"
           @click="handleSelectImportType('openapi')"
         >
           <div class="import-type-icon">
@@ -221,6 +230,7 @@
 
         <div
           class="import-type-card"
+          data-testid="testcase.explorer.import.har"
           @click="handleSelectImportType('har')"
         >
           <div class="import-type-icon">
@@ -235,6 +245,7 @@
 
         <div
           class="import-type-card"
+          data-testid="testcase.explorer.import.curl"
           @click="handleSelectImportType('curl')"
         >
           <div class="import-type-icon">

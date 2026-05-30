@@ -4,6 +4,7 @@
     <div class="config-row">
       <div class="request-line">
         <el-select
+          data-testid="testcase.request.method"
           v-model="internalCaseData.method"
           placeholder="方法"
           style="width: 120px"
@@ -19,6 +20,7 @@
         </el-select>
         
         <el-input
+          data-testid="testcase.request.url"
           v-model="internalCaseData.path"
           placeholder="请输入请求URL"
           class="url-input"
@@ -29,6 +31,7 @@
         <div class="action-buttons">
           <!-- 发送按钮 -->
           <el-button
+            data-testid="testcase.request.action.send"
             type="primary"
             :loading="sendLoading"
             :disabled="saveLoading || sendLoading"
@@ -41,6 +44,7 @@
           <!-- 保存按钮组 - 接口类型显示下拉，用例类型显示普通按钮 -->
           <el-button-group v-if="isApiType">
             <el-button 
+              data-testid="testcase.request.action.save-api"
               :loading="saveLoading"
               :disabled="saveLoading || sendLoading"
               @click="handleSave"
@@ -50,6 +54,7 @@
             </el-button>
             <el-dropdown @command="handleSaveCommand" :disabled="saveLoading || sendLoading" placement="bottom-end">
               <el-button 
+                data-testid="testcase.request.action.save-menu"
                 :loading="saveLoading"
                 :disabled="saveLoading || sendLoading"
                 style="padding: 8px 8px;"
@@ -58,7 +63,7 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="save-to-case">
+                  <el-dropdown-item command="save-to-case" data-testid="testcase.request.menu.save-to-case">
                     <el-icon><DocumentCopy /></el-icon>
                     保存为用例
                   </el-dropdown-item>
@@ -70,6 +75,7 @@
           <!-- 非接口类型的普通保存按钮 -->
           <el-button 
             v-else
+            data-testid="testcase.request.action.save-case"
             :loading="saveLoading"
             :disabled="saveLoading || sendLoading"
             @click="handleSave"
@@ -80,25 +86,25 @@
           
           <!-- 更多操作 -->
           <el-dropdown @command="handleMoreAction" :disabled="saveLoading || sendLoading">
-            <el-button text :disabled="saveLoading || sendLoading">
+            <el-button text data-testid="testcase.request.action.more" :disabled="saveLoading || sendLoading">
               更多操作
               <el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="duplicate" :disabled="!props.caseData?.caseId">
+                <el-dropdown-item command="duplicate" data-testid="testcase.request.menu.duplicate" :disabled="!props.caseData?.caseId">
                   <el-icon><DocumentCopy /></el-icon>
                   复制用例
                 </el-dropdown-item>
-                <el-dropdown-item command="export">
+                <el-dropdown-item command="export" data-testid="testcase.request.menu.export">
                   <el-icon><Download /></el-icon>
                   导出用例
                 </el-dropdown-item>
-                <el-dropdown-item divided command="generate-code">
+                <el-dropdown-item divided command="generate-code" data-testid="testcase.request.menu.generate-code">
                   <el-icon><Document /></el-icon>
                   生成代码
                 </el-dropdown-item>
-                <el-dropdown-item command="run-collection">
+                <el-dropdown-item command="run-collection" data-testid="testcase.request.menu.run-collection">
                   <el-icon><VideoPlay /></el-icon>
                   批量运行
                 </el-dropdown-item>
@@ -107,7 +113,7 @@
           </el-dropdown>
           
           <!-- 历史记录按钮 -->
-          <el-button text @click="handleHistory" :disabled="saveLoading || sendLoading">
+          <el-button text data-testid="testcase.request.action.history" @click="handleHistory" :disabled="saveLoading || sendLoading">
             <el-icon :size="20"><Clock /></el-icon>
           </el-button>
         </div>
@@ -116,6 +122,7 @@
     
     <!-- 保存为用例对话框 -->
     <el-dialog
+      data-testid="testcase.request.save-as.dialog"
       v-model="showSaveToCaseDialog"
       title="保存为用例"
       width="500px"
@@ -125,7 +132,7 @@
         <el-form-item label="用例名称">
           <el-row :gutter="8" style="width: 100%;">
             <el-col :span="8">
-              <el-select v-model="formData.prefix" placeholder="选择前缀" style="width: 100%;">
+              <el-select v-model="formData.prefix" data-testid="testcase.request.save-as.prefix" placeholder="选择前缀" style="width: 100%;">
                 <el-option label="成功  " value="成功  " />
                 <el-option label="失败  " value="失败  " />
                 <el-option label="缺少参数  " value="缺少参数  " />
@@ -138,15 +145,15 @@
               </el-select>
             </el-col>
             <el-col :span="16">
-              <el-input v-model="formData.customName" placeholder="请输入自定义内容（可选）" />
+              <el-input v-model="formData.customName" data-testid="testcase.request.save-as.custom-name" placeholder="请输入自定义内容（可选）" />
             </el-col>
           </el-row>
         </el-form-item>
       </el-form>
       
       <template #footer>
-        <el-button @click="showSaveToCaseDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveToCaseConfirm" :loading="saveLoading">
+        <el-button data-testid="testcase.request.save-as.cancel" @click="showSaveToCaseDialog = false">取消</el-button>
+        <el-button type="primary" data-testid="testcase.request.save-as.confirm" @click="handleSaveToCaseConfirm" :loading="saveLoading">
           确认保存
         </el-button>
       </template>

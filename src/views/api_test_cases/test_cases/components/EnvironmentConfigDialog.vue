@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    data-testid="testcase.environment-config.root"
     v-model="visible"
     title=""
     width="720px"
@@ -14,7 +15,7 @@
       </div>
     </template>
 
-    <div class="environment-config">
+    <div class="environment-config" data-testid="testcase.environment-config.content">
       <!-- 加载状态 -->
       <div v-if="environmentsLoading" class="loading-state">
         <el-icon class="is-loading"><Loading /></el-icon>
@@ -27,6 +28,7 @@
           <button
             v-for="env in environmentsList"
             :key="env.id"
+            :data-testid="`testcase.environment-config.env.${env.id}`"
             class="env-tab"
             :class="{ active: activeEnv === String(env.id) }"
             @click="selectEnvironment(env.id)"
@@ -51,6 +53,7 @@
               <div class="form-item">
                 <label class="form-label">基础 URL</label>
                 <el-select
+                  data-testid="testcase.environment-config.base-url"
                   v-model="currentConfig.baseUrl"
                   placeholder="选择或输入 URL"
                   filterable
@@ -74,6 +77,7 @@
               <div class="form-item form-item-small">
                 <label class="form-label">超时 (ms)</label>
                 <el-input-number
+                  data-testid="testcase.environment-config.timeout"
                   v-model="currentConfig.timeout"
                   :min="1000"
                   :max="60000"
@@ -86,6 +90,7 @@
             <div class="form-item">
               <label class="form-label">描述</label>
               <el-input
+                data-testid="testcase.environment-config.description"
                 v-model="currentConfig.description"
                 type="textarea"
                 :rows="2"
@@ -100,7 +105,7 @@
           <section class="config-section">
             <div class="section-header">
               <h3 class="section-label">全局请求头</h3>
-              <button class="add-btn" @click="addHeader">
+              <button class="add-btn" data-testid="testcase.environment-config.headers.action.add" @click="addHeader">
                 <el-icon><Plus /></el-icon>
                 <span>添加</span>
               </button>
@@ -119,10 +124,11 @@
                 class="table-row"
               >
                 <span class="col-check">
-                  <el-checkbox v-model="header.enabled" />
+                  <el-checkbox :data-testid="`testcase.environment-config.headers.row.${index}.enabled`" v-model="header.enabled" />
                 </span>
                 <span class="col-key">
                   <input
+                    :data-testid="`testcase.environment-config.headers.row.${index}.key`"
                     v-model="header.key"
                     type="text"
                     placeholder="Header"
@@ -131,6 +137,7 @@
                 </span>
                 <span class="col-value">
                   <input
+                    :data-testid="`testcase.environment-config.headers.row.${index}.value`"
                     v-model="header.value"
                     type="text"
                     placeholder="Value"
@@ -139,6 +146,7 @@
                 </span>
                 <span class="col-desc">
                   <input
+                    :data-testid="`testcase.environment-config.headers.row.${index}.description`"
                     v-model="header.description"
                     type="text"
                     placeholder="描述"
@@ -146,7 +154,7 @@
                   />
                 </span>
                 <span class="col-action">
-                  <button class="icon-btn danger" @click="removeHeader(index)">
+                  <button class="icon-btn danger" :data-testid="`testcase.environment-config.headers.row.${index}.delete`" @click="removeHeader(index)">
                     <el-icon><Delete /></el-icon>
                   </button>
                 </span>
@@ -161,7 +169,7 @@
           <section class="config-section">
             <div class="section-header">
               <h3 class="section-label">全局 Cookie</h3>
-              <button class="add-btn" @click="addCookie">
+              <button class="add-btn" data-testid="testcase.environment-config.cookies.action.add" @click="addCookie">
                 <el-icon><Plus /></el-icon>
                 <span>添加</span>
               </button>
@@ -180,10 +188,11 @@
                 class="table-row"
               >
                 <span class="col-check">
-                  <el-checkbox v-model="cookie.enabled" />
+                  <el-checkbox :data-testid="`testcase.environment-config.cookies.row.${index}.enabled`" v-model="cookie.enabled" />
                 </span>
                 <span class="col-key">
                   <input
+                    :data-testid="`testcase.environment-config.cookies.row.${index}.key`"
                     v-model="cookie.key"
                     type="text"
                     placeholder="Cookie"
@@ -192,6 +201,7 @@
                 </span>
                 <span class="col-value">
                   <input
+                    :data-testid="`testcase.environment-config.cookies.row.${index}.value`"
                     v-model="cookie.value"
                     type="text"
                     placeholder="Value"
@@ -200,6 +210,7 @@
                 </span>
                 <span class="col-desc">
                   <input
+                    :data-testid="`testcase.environment-config.cookies.row.${index}.description`"
                     v-model="cookie.description"
                     type="text"
                     placeholder="描述"
@@ -207,7 +218,7 @@
                   />
                 </span>
                 <span class="col-action">
-                  <button class="icon-btn danger" @click="removeCookie(index)">
+                  <button class="icon-btn danger" :data-testid="`testcase.environment-config.cookies.row.${index}.delete`" @click="removeCookie(index)">
                     <el-icon><Delete /></el-icon>
                   </button>
                 </span>
@@ -222,7 +233,7 @@
           <section class="config-section">
             <div class="section-header">
               <h3 class="section-label">环境变量</h3>
-              <button class="add-btn" @click="addVariable">
+              <button class="add-btn" data-testid="testcase.environment-config.variables.action.add" @click="addVariable">
                 <el-icon><Plus /></el-icon>
                 <span>添加</span>
               </button>
@@ -240,6 +251,7 @@
               >
                 <span class="col-key-wide">
                   <input
+                    :data-testid="`testcase.environment-config.variables.row.${index}.key`"
                     v-model="variable.key"
                     type="text"
                     placeholder="变量名"
@@ -248,6 +260,7 @@
                 </span>
                 <span class="col-value-wide">
                   <input
+                    :data-testid="`testcase.environment-config.variables.row.${index}.value`"
                     v-model="variable.value"
                     type="text"
                     placeholder="变量值"
@@ -255,7 +268,7 @@
                   />
                 </span>
                 <span class="col-action">
-                  <button class="icon-btn danger" @click="removeVariable(variable)">
+                  <button class="icon-btn danger" :data-testid="`testcase.environment-config.variables.row.${index}.delete`" @click="removeVariable(variable)">
                     <el-icon><Delete /></el-icon>
                   </button>
                 </span>
@@ -271,8 +284,8 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <button class="btn btn-secondary" @click="handleClose">取消</button>
-        <button class="btn btn-primary" :disabled="saveLoading" @click="handleSave">
+        <button class="btn btn-secondary" data-testid="testcase.environment-config.action.cancel" @click="handleClose">取消</button>
+        <button class="btn btn-primary" data-testid="testcase.environment-config.action.save" :disabled="saveLoading" @click="handleSave">
           {{ saveLoading ? '保存中...' : '保存' }}
         </button>
       </div>

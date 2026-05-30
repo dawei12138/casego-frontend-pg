@@ -1,14 +1,14 @@
 <template>
-  <div class="request-body">
+  <div class="request-body" data-testid="testcase.body.root">
     <div class="body-header">
-      <el-radio-group v-model="bodyType" @change="handleBodyTypeChange">
-        <el-radio-button value="NONE">NONE</el-radio-button>
-        <el-radio-button value="Form_Data">Form Data</el-radio-button>
-        <el-radio-button value="x_www_form_urlencoded">x-www-form-urlencoded</el-radio-button>
-        <el-radio-button value="JSON">JSON</el-radio-button>
-        <el-radio-button value="XML">XML</el-radio-button>
-        <el-radio-button value="Raw">Raw</el-radio-button>
-        <el-radio-button value="Binary">Binary</el-radio-button>
+      <el-radio-group v-model="bodyType" data-testid="testcase.body.type" @change="handleBodyTypeChange">
+        <el-radio-button value="NONE" data-testid="testcase.body.type.none">NONE</el-radio-button>
+        <el-radio-button value="Form_Data" data-testid="testcase.body.type.form-data">Form Data</el-radio-button>
+        <el-radio-button value="x_www_form_urlencoded" data-testid="testcase.body.type.urlencoded">x-www-form-urlencoded</el-radio-button>
+        <el-radio-button value="JSON" data-testid="testcase.body.type.json">JSON</el-radio-button>
+        <el-radio-button value="XML" data-testid="testcase.body.type.xml">XML</el-radio-button>
+        <el-radio-button value="Raw" data-testid="testcase.body.type.raw">Raw</el-radio-button>
+        <el-radio-button value="Binary" data-testid="testcase.body.type.binary">Binary</el-radio-button>
       </el-radio-group>
     </div>
     
@@ -21,20 +21,21 @@
       <!-- Form Data 和 x-www-form-urlencoded - 键值对表格 -->
       <div v-else-if="bodyType === 'Form_Data' || bodyType === 'x_www_form_urlencoded'" class="form-data-content">
         <div class="form-data-header">
-          <el-button size="small" type="primary" @click="addFormItem">
+          <el-button size="small" type="primary" data-testid="testcase.body.form.action.add" @click="addFormItem">
             <el-icon><Plus /></el-icon>
             添加参数
           </el-button>
-          <el-button size="small" @click="openBulkEdit">
+          <el-button size="small" data-testid="testcase.body.form.action.bulk-edit" @click="openBulkEdit">
             <el-icon><Edit /></el-icon>
             批量编辑
           </el-button>
         </div>
         
-        <el-table :data="filteredDisplayFormDataList" style="width: 100%" max-height="300">
+        <el-table :data="filteredDisplayFormDataList" data-testid="testcase.body.form.table" style="width: 100%" max-height="300">
           <el-table-column width="50">
             <template #header>
               <el-checkbox
+                data-testid="testcase.body.form.select-all"
                 v-model="allFormSelected"
                 :indeterminate="isFormIndeterminate"
                 @change="handleSelectAllForm"
@@ -42,6 +43,7 @@
             </template>
             <template #default="{ row, $index }">
               <el-checkbox
+                :data-testid="`testcase.body.form.row.${$index}.checkbox`"
                 :model-value="row.isRun === true || row.isRun === 1"
                 @change="(value) => handleFormCheckboxChange(row, value)"
               />
@@ -51,6 +53,7 @@
           <el-table-column label="键名" width="160">
             <template #default="{ row, $index }">
               <el-input
+                :data-testid="`testcase.body.form.row.${$index}.key`"
                 v-model="row.key"
                 placeholder="键名"
                 size="small"
@@ -64,6 +67,7 @@
               <div class="value-cell">
                 <el-input
                   v-if="row.dataType !== 'file'"
+                  :data-testid="`testcase.body.form.row.${$index}.value`"
                   v-model="row.value"
                   placeholder="键值"
                   size="small"
@@ -77,6 +81,7 @@
                          class="file-item-vertical"
                        >
                          <el-button
+                           :data-testid="`testcase.body.form.row.${$index}.file.${fileIndex}.delete`"
                            size="small"
                            type="danger"
                            :icon="Delete"
@@ -90,6 +95,7 @@
                      <span v-else class="no-files-placeholder-vertical">请选择文件</span>
                    </div>
                    <el-button
+                     :data-testid="`testcase.body.form.row.${$index}.file.select`"
                      size="small"
                      type="primary"
                      @click="openFileManager(row)"
@@ -105,6 +111,7 @@
           <el-table-column label="数据类型" width="120">
             <template #default="{ row, $index }">
               <el-select
+                :data-testid="`testcase.body.form.row.${$index}.data-type`"
                 v-model="row.dataType"
                 placeholder="类型"
                 size="small"
@@ -128,6 +135,7 @@
                 placement="right"
               >
                 <el-button
+                  :data-testid="`testcase.body.form.row.${$index}.required`"
                   text
                   size="small"
                   @click="toggleRequired(row)"
@@ -147,6 +155,7 @@
           <el-table-column label="描述" width="140">
             <template #default="{ row, $index }">
               <el-input
+                :data-testid="`testcase.body.form.row.${$index}.description`"
                 v-model="row.description"
                 placeholder="描述"
                 size="small"
@@ -157,6 +166,7 @@
           <el-table-column label="操作" width="80">
             <template #default="{ row, $index }">
               <el-button
+                :data-testid="`testcase.body.form.row.${$index}.delete`"
                 size="small"
                 text
                 type="danger"
@@ -174,12 +184,12 @@
         <!-- 工具栏 -->
         <div class="editor-toolbar json-toolbar">
           <div class="left-actions">
-            <el-button size="small" @click="formatJsonEditor" v-if="bodyType === 'JSON'">格式化</el-button>
-            <el-button size="small" @click="compressJsonEditor" v-if="bodyType === 'JSON'">压缩</el-button>
-            <el-button size="small" @click="convertToXml" v-if="bodyType === 'JSON'">转XML</el-button>
-            <el-button size="small" @click="formatXmlEditor" v-if="bodyType === 'XML'">格式化</el-button>
-            <el-button size="small" @click="convertToJson" v-if="bodyType === 'XML'">转JSON</el-button>
-            <el-button size="small" @click="clearJsonEditor">清空</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.format-json" @click="formatJsonEditor" v-if="bodyType === 'JSON'">格式化</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.compress-json" @click="compressJsonEditor" v-if="bodyType === 'JSON'">压缩</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.convert-to-xml" @click="convertToXml" v-if="bodyType === 'JSON'">转XML</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.format-xml" @click="formatXmlEditor" v-if="bodyType === 'XML'">格式化</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.convert-to-json" @click="convertToJson" v-if="bodyType === 'XML'">转JSON</el-button>
+            <el-button size="small" data-testid="testcase.body.editor.action.clear" @click="clearJsonEditor">清空</el-button>
           </div>
           <div class="right-actions">
             <!-- 错误提示 -->
@@ -189,6 +199,7 @@
               placement="top"
             >
               <el-button
+                data-testid="testcase.body.editor.action.jump-error"
                 size="small"
                 type="danger"
                 circle
@@ -197,7 +208,7 @@
                 <el-icon><WarningFilled /></el-icon>
               </el-button>
             </el-tooltip>
-            <el-button size="small" :icon="isEditorFullscreen ? Close : FullScreen" @click="toggleEditorFullscreen">
+            <el-button size="small" data-testid="testcase.body.editor.action.fullscreen" :icon="isEditorFullscreen ? Close : FullScreen" @click="toggleEditorFullscreen">
               {{ isEditorFullscreen ? '退出全屏' : '全屏' }}
             </el-button>
           </div>
@@ -206,11 +217,11 @@
         <!-- Monaco Editor 容器 -->
         <div class="monaco-editor-wrapper" :class="{ 'is-fullscreen': isEditorFullscreen }">
           <div v-if="isEditorFullscreen" class="monaco-fullscreen-toolbar">
-            <el-button size="small" :icon="Close" @click="toggleEditorFullscreen">
+            <el-button size="small" data-testid="testcase.body.editor.action.exit-fullscreen" :icon="Close" @click="toggleEditorFullscreen">
               退出全屏
             </el-button>
           </div>
-          <div class="monaco-editor-container" :ref="setMonacoEditorRef"></div>
+          <div class="monaco-editor-container" data-testid="testcase.body.editor.monaco" :ref="setMonacoEditorRef"></div>
         </div>
 
         <!-- 错误列表 -->
@@ -219,6 +230,7 @@
             v-for="(error, index) in validationErrors"
             :key="index"
             class="error-item"
+            :data-testid="`testcase.body.editor.error.${index}`"
             @click="jumpToError(error)"
           >
             <el-icon class="error-icon"><WarningFilled /></el-icon>
@@ -234,6 +246,7 @@
           <div class="binary-file-display">
             <div v-if="binaryFileConfig" class="selected-binary-file">
               <el-tag
+                data-testid="testcase.body.binary.selected-file"
                 closable
                 size="large"
                 @close="clearBinaryFile"
@@ -253,6 +266,7 @@
           </div>
           <el-button
             type="primary"
+            data-testid="testcase.body.binary.action.select-file"
             @click="openBinaryFileManager"
             class="binary-select-button"
           >
@@ -279,6 +293,7 @@
     <!-- 批量编辑弹窗 -->
     <BulkEditDialog
       v-model="bulkEditVisible"
+      test-id-prefix="testcase.body.form.bulk-edit"
       :title="bodyType === 'Form_Data' ? '批量编辑 Form Data' : '批量编辑 x-www-form-urlencoded'"
       :data="formDataList"
       @confirm="handleBulkEditConfirm"

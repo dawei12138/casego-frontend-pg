@@ -1,21 +1,23 @@
 <template>
   <el-dialog
+    :data-testid="`${testIdPrefix}.root`"
     v-model="dialogVisible"
     :title="title"
     width="800px"
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <div class="bulk-edit-container">
+    <div class="bulk-edit-container" :data-testid="`${testIdPrefix}.content`">
       <!-- 模式选择 -->
       <div class="mode-selection">
         <span class="mode-label">导入模式：</span>
-        <el-radio-group v-model="importMode" size="small">
-          <el-radio-button value="comma">逗号模式</el-radio-button>
-          <el-radio-button value="colon">冒号模式</el-radio-button>
-          <el-radio-button value="equals">等号模式</el-radio-button>
+        <el-radio-group v-model="importMode" :data-testid="`${testIdPrefix}.mode`" size="small">
+          <el-radio-button value="comma" :data-testid="`${testIdPrefix}.mode.comma`">逗号模式</el-radio-button>
+          <el-radio-button value="colon" :data-testid="`${testIdPrefix}.mode.colon`">冒号模式</el-radio-button>
+          <el-radio-button value="equals" :data-testid="`${testIdPrefix}.mode.equals`">等号模式</el-radio-button>
         </el-radio-group>
         <el-button
+          :data-testid="`${testIdPrefix}.action.format-help`"
           size="small"
           type="info"
           text
@@ -26,7 +28,8 @@
       </div>
 
       <!-- 格式说明 -->
-      <el-alert
+        <el-alert
+        :data-testid="`${testIdPrefix}.format-help`"
         v-if="showFormatHelp"
         :closable="true"
         type="info"
@@ -68,10 +71,11 @@
         <div class="edit-header">
           <span class="edit-label">数据内容：</span>
           <div class="edit-actions">
-            <el-button size="small" @click="clearContent">清空</el-button>
+            <el-button size="small" :data-testid="`${testIdPrefix}.action.clear`" @click="clearContent">清空</el-button>
           </div>
         </div>
         <el-input
+          :data-testid="`${testIdPrefix}.content.textarea`"
           v-model="editContent"
           type="textarea"
           :rows="15"
@@ -90,8 +94,8 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" @click="handleConfirm" :disabled="!!parseError">
+        <el-button :data-testid="`${testIdPrefix}.action.cancel`" @click="handleClose">取消</el-button>
+        <el-button :data-testid="`${testIdPrefix}.action.confirm`" type="primary" @click="handleConfirm" :disabled="!!parseError">
           确定导入
         </el-button>
       </div>
@@ -116,6 +120,10 @@ const props = defineProps({
   data: {
     type: Array,
     default: () => []
+  },
+  testIdPrefix: {
+    type: String,
+    default: 'testcase.bulk-edit'
   }
 })
 

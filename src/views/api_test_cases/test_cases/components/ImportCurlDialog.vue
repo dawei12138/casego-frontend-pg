@@ -1,14 +1,16 @@
 <template>
   <el-dialog
+    data-testid="testcase.import.curl.root"
     v-model="dialogVisible"
     title="导入 cURL 命令"
     width="700px"
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <div class="curl-import-container">
+    <div class="curl-import-container" data-testid="testcase.import.curl.content">
       <!-- 说明信息 -->
       <el-alert
+        data-testid="testcase.import.curl.info"
         type="info"
         :closable="false"
         class="info-alert"
@@ -22,6 +24,7 @@
       <div class="curl-input-section">
         <div class="section-label">cURL 命令</div>
         <el-input
+          data-testid="testcase.import.curl.command"
           v-model="curlCommand"
           type="textarea"
           :rows="12"
@@ -38,7 +41,7 @@ curl 'https://api.example.com/users' \
       </div>
 
       <!-- 支持的选项说明 -->
-      <el-collapse class="options-collapse">
+      <el-collapse class="options-collapse" data-testid="testcase.import.curl.options">
         <el-collapse-item title="支持的 cURL 选项" name="options">
           <div class="options-list">
             <el-tag size="small" type="info">-X, --request</el-tag>
@@ -58,8 +61,9 @@ curl 'https://api.example.com/users' \
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
+        <el-button data-testid="testcase.import.curl.action.cancel" @click="handleClose">取消</el-button>
         <el-button
+          data-testid="testcase.import.curl.action.import"
           type="primary"
           :loading="loading"
           :disabled="!curlCommand.trim()"

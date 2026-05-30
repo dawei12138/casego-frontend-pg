@@ -1,7 +1,7 @@
 <template>
-  <div class="response-section">
+  <div class="response-section" data-testid="testcase.response-section.root">
     <!-- 响应状态栏 -->
-    <div class="response-status-bar" v-if="responseData || loading">
+    <div class="response-status-bar" data-testid="testcase.response-section.status" v-if="responseData || loading">
       <div v-if="loading" class="status-loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>正在发送请求...</span>
@@ -42,11 +42,12 @@
         <p>请求发送中，请稍候...</p>
       </div>
       
-      <el-tabs v-else-if="responseData" v-model="activeTab" type="card" class="response-tabs">
+      <el-tabs v-else-if="responseData" v-model="activeTab" type="card" class="response-tabs" data-testid="testcase.response-section.tabs">
         <!-- 响应体 -->
         <el-tab-pane label="响应体" name="body">
           <div class="response-body">
             <el-input
+              data-testid="testcase.response-section.body"
               :model-value="formatResponseBody(responseData.data)"
               type="textarea"
               readonly
@@ -59,7 +60,7 @@
         <!-- 响应头 -->
         <el-tab-pane label="响应头" name="headers">
           <div class="response-headers">
-            <div v-for="(value, key) in responseData.headers" :key="key" class="header-item">
+            <div v-for="(value, key, index) in responseData.headers" :key="key" class="header-item" :data-testid="`testcase.response-section.headers.row.${index}`">
               <span class="header-key">{{ key }}:</span>
               <span class="header-value">{{ value }}</span>
             </div>

@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    data-testid="testcase.import.openapi.root"
     v-model="dialogVisible"
     :title="currentStep === 'config' ? '导入 OpenAPI/Swagger 接口' : '预览导入内容'"
     width="800px"
@@ -7,19 +8,20 @@
     @close="handleClose"
   >
     <!-- 步骤1: 配置参数 -->
-    <div v-if="currentStep === 'config'" class="import-config">
+    <div v-if="currentStep === 'config'" class="import-config" data-testid="testcase.import.openapi.config">
       <!-- 数据源选择 -->
-      <el-form :model="configForm" label-width="100px" class="config-form">
+      <el-form :model="configForm" label-width="100px" class="config-form" data-testid="testcase.import.openapi.config.form">
         <el-form-item label="数据源">
-          <el-radio-group v-model="configForm.sourceType">
-            <el-radio label="url">URL地址</el-radio>
-            <el-radio label="file">文件上传</el-radio>
+          <el-radio-group v-model="configForm.sourceType" data-testid="testcase.import.openapi.source-type">
+            <el-radio label="url" data-testid="testcase.import.openapi.source-type.url">URL地址</el-radio>
+            <el-radio label="file" data-testid="testcase.import.openapi.source-type.file">文件上传</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <!-- URL输入 -->
         <el-form-item v-if="configForm.sourceType === 'url'" label="URL地址">
           <el-autocomplete
+            data-testid="testcase.import.openapi.url"
             v-model="configForm.url"
             :fetch-suggestions="queryUrlHistory"
             placeholder="请输入 OpenAPI/Swagger 规范的 URL 地址"
@@ -33,6 +35,7 @@
                 <el-icon class="history-icon"><Clock /></el-icon>
                 <span class="url-text">{{ item.value }}</span>
                 <el-icon
+                  data-testid="testcase.import.openapi.url-history.delete"
                   class="delete-icon"
                   @click.stop="handleDeleteHistory(item.value)"
                 >
@@ -46,6 +49,7 @@
         <!-- 文件上传 -->
         <el-form-item v-else label="上传文件">
           <el-upload
+            data-testid="testcase.import.openapi.file"
             ref="uploadRef"
             :auto-upload="false"
             :on-change="handleFileChange"
@@ -70,6 +74,7 @@
         <!-- 目标模块 -->
         <el-form-item label="目标模块">
           <el-tree-select
+            data-testid="testcase.import.openapi.target-module"
             v-model="configForm.targetModuleId"
             :data="moduleTreeOptions"
             :props="{ label: 'name', value: 'moduleId' }"
@@ -82,7 +87,7 @@
 
         <!-- 高级选项折叠面板 -->
         <el-divider content-position="left">
-          <span class="divider-text" @click="showAdvanced = !showAdvanced">
+          <span class="divider-text" data-testid="testcase.import.openapi.advanced.toggle" @click="showAdvanced = !showAdvanced">
             高级选项
             <el-icon :class="{ 'is-rotated': showAdvanced }">
               <CaretRight />
@@ -94,18 +99,18 @@
           <div v-show="showAdvanced" class="advanced-options">
             <!-- 模块策略 -->
             <el-form-item label="模块策略">
-              <el-radio-group v-model="configForm.moduleStrategy">
-                <el-radio-button label="auto_match">
+              <el-radio-group v-model="configForm.moduleStrategy" data-testid="testcase.import.openapi.module-strategy">
+                <el-radio-button label="auto_match" data-testid="testcase.import.openapi.module-strategy.auto-match">
                   <el-tooltip content="按名称匹配已有模块，不存在则创建新模块" placement="top">
                     <span>自动匹配</span>
                   </el-tooltip>
                 </el-radio-button>
-                <el-radio-button label="create_all">
+                <el-radio-button label="create_all" data-testid="testcase.import.openapi.module-strategy.create-all">
                   <el-tooltip content="不匹配已有模块，全部创建为新模块" placement="top">
                     <span>全部创建</span>
                   </el-tooltip>
                 </el-radio-button>
-                <el-radio-button label="target_only">
+                <el-radio-button label="target_only" data-testid="testcase.import.openapi.module-strategy.target-only">
                   <el-tooltip content="所有接口都导入到目标模块下" placement="top">
                     <span>仅目标模块</span>
                   </el-tooltip>
@@ -115,18 +120,18 @@
 
             <!-- 冲突策略 -->
             <el-form-item label="冲突策略">
-              <el-radio-group v-model="configForm.conflictStrategy">
-                <el-radio-button label="skip">
+              <el-radio-group v-model="configForm.conflictStrategy" data-testid="testcase.import.openapi.conflict-strategy">
+                <el-radio-button label="skip" data-testid="testcase.import.openapi.conflict-strategy.skip">
                   <el-tooltip content="已存在的接口不做任何处理" placement="top">
                     <span>跳过</span>
                   </el-tooltip>
                 </el-radio-button>
-                <el-radio-button label="overwrite">
+                <el-radio-button label="overwrite" data-testid="testcase.import.openapi.conflict-strategy.overwrite">
                   <el-tooltip content="删除原有数据后重新创建（断言/前置/后置会删除）" placement="top">
                     <span>覆盖</span>
                   </el-tooltip>
                 </el-radio-button>
-                <el-radio-button label="smart_merge">
+                <el-radio-button label="smart_merge" data-testid="testcase.import.openapi.conflict-strategy.smart-merge">
                   <el-tooltip content="只更新有变化的字段，新增不存在的参数（保留断言/前置/后置）" placement="top">
                     <span>智能合并</span>
                   </el-tooltip>
@@ -136,17 +141,17 @@
 
             <!-- 导入选项 -->
             <el-form-item label="导入选项">
-              <el-checkbox-group v-model="configForm.importOptions">
-                <el-checkbox label="headers">Headers</el-checkbox>
-                <el-checkbox label="params">Params</el-checkbox>
-                <el-checkbox label="body">请求体</el-checkbox>
-                <el-checkbox label="cookies">Cookies</el-checkbox>
+              <el-checkbox-group v-model="configForm.importOptions" data-testid="testcase.import.openapi.import-options">
+                <el-checkbox label="headers" data-testid="testcase.import.openapi.import-options.headers">Headers</el-checkbox>
+                <el-checkbox label="params" data-testid="testcase.import.openapi.import-options.params">Params</el-checkbox>
+                <el-checkbox label="body" data-testid="testcase.import.openapi.import-options.body">请求体</el-checkbox>
+                <el-checkbox label="cookies" data-testid="testcase.import.openapi.import-options.cookies">Cookies</el-checkbox>
               </el-checkbox-group>
             </el-form-item>
 
             <!-- 包含废弃接口 -->
             <el-form-item label="">
-              <el-checkbox v-model="configForm.includeDeprecated">
+              <el-checkbox v-model="configForm.includeDeprecated" data-testid="testcase.import.openapi.include-deprecated">
                 包含废弃接口
               </el-checkbox>
             </el-form-item>
@@ -156,7 +161,7 @@
     </div>
 
     <!-- 步骤2: 预览 -->
-    <div v-else class="import-preview">
+    <div v-else class="import-preview" data-testid="testcase.import.openapi.preview">
       <!-- API 信息 -->
       <div class="preview-info">
         <div class="api-title">
@@ -189,15 +194,16 @@
 
       <!-- 批量操作 -->
       <div class="batch-actions">
-        <el-button size="small" @click="handleSelectAll">全选</el-button>
-        <el-button size="small" @click="handleSelectNone">全不选</el-button>
-        <el-button size="small" @click="handleSelectNew">仅选新增</el-button>
-        <el-button size="small" @click="handleSelectUpdate">仅选更新</el-button>
+        <el-button size="small" data-testid="testcase.import.openapi.preview.action.select-all" @click="handleSelectAll">全选</el-button>
+        <el-button size="small" data-testid="testcase.import.openapi.preview.action.select-none" @click="handleSelectNone">全不选</el-button>
+        <el-button size="small" data-testid="testcase.import.openapi.preview.action.select-new" @click="handleSelectNew">仅选新增</el-button>
+        <el-button size="small" data-testid="testcase.import.openapi.preview.action.select-update" @click="handleSelectUpdate">仅选更新</el-button>
       </div>
 
       <!-- 预览树 -->
       <div class="preview-tree-container">
         <el-tree
+          data-testid="testcase.import.openapi.preview.tree"
           ref="previewTreeRef"
           :data="previewTreeData"
           :props="previewTreeProps"
@@ -253,14 +259,16 @@
 
     <template #footer>
       <span class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
+        <el-button data-testid="testcase.import.openapi.action.cancel" @click="handleClose">取消</el-button>
         <el-button
           v-if="currentStep === 'preview'"
+          data-testid="testcase.import.openapi.action.back"
           @click="handleBack"
         >
           上一步
         </el-button>
         <el-button
+          data-testid="testcase.import.openapi.action.next"
           type="primary"
           :loading="loading"
           @click="handleNext"

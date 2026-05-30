@@ -1,5 +1,5 @@
 <template>
-  <div class="request-section">
+  <div class="request-section" data-testid="testcase.request.section">
     <!-- 基本配置（包含操作按钮） -->
     <RequestConfig
       ref="requestConfigRef"

@@ -1,5 +1,6 @@
 <template>
   <el-dialog
+    data-testid="testcase.response.add-variable.root"
     v-model="dialogVisible"
     title="添加提取变量"
     width="600px"
@@ -7,6 +8,7 @@
     :before-close="handleClose"
   >
     <el-form
+      data-testid="testcase.response.add-variable.form"
       ref="formRef"
       :model="formData"
       :rules="rules"
@@ -15,6 +17,7 @@
     >
       <el-form-item label="名称" prop="name">
         <el-input
+          data-testid="testcase.response.add-variable.name"
           v-model="formData.name"
           placeholder="请输入提取变量的名称"
           clearable
@@ -23,6 +26,7 @@
 
       <el-form-item label="变量名" prop="variableName">
         <el-input
+          data-testid="testcase.response.add-variable.variable-name"
           v-model="formData.variableName"
           placeholder="请输入要保存的变量名"
           clearable
@@ -31,12 +35,13 @@
 
       <el-form-item label="JSONPath" prop="jsonpath">
         <el-input
+          data-testid="testcase.response.add-variable.jsonpath"
           v-model="formData.jsonpath"
           placeholder="请输入 JSONPath 表达式"
           clearable
         >
           <template #append>
-            <el-button @click="testJsonPath" :disabled="!formData.jsonpath">
+            <el-button data-testid="testcase.response.add-variable.action.test-jsonpath" @click="testJsonPath" :disabled="!formData.jsonpath">
               测试
             </el-button>
           </template>
@@ -65,6 +70,7 @@
 
       <el-form-item label="额外提取索引">
         <el-switch
+          data-testid="testcase.response.add-variable.extract-index.enabled"
           v-model="extractIndexEnabled"
           active-text="启用"
           inactive-text="禁用"
@@ -77,6 +83,7 @@
         prop="extractIndex"
       >
         <el-input-number
+          data-testid="testcase.response.add-variable.extract-index.value"
           v-model="formData.extractIndex"
           :min="0"
           :max="9999"
@@ -86,8 +93,8 @@
     </el-form>
 
     <template #footer>
-      <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleSubmit" :loading="submitLoading">
+      <el-button data-testid="testcase.response.add-variable.action.cancel" @click="handleClose">取消</el-button>
+      <el-button data-testid="testcase.response.add-variable.action.confirm" type="primary" @click="handleSubmit" :loading="submitLoading">
         确定
       </el-button>
     </template>

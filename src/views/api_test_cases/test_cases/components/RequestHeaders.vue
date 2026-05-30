@@ -1,13 +1,13 @@
 <template>
-  <div class="request-headers">
+  <div class="request-headers" data-testid="testcase.headers.root">
     <div class="headers-header">
       <div class="header-actions">
-        <el-button size="small" type="primary" @click="addHeader">
+        <el-button size="small" type="primary" data-testid="testcase.headers.action.add" @click="addHeader">
           <el-icon><Plus /></el-icon>
           添加请求头
         </el-button>
-        <el-button size="small" @click="addCommonHeaders">常用请求头</el-button>
-        <el-button size="small" @click="openBulkEdit">
+        <el-button size="small" data-testid="testcase.headers.action.common" @click="addCommonHeaders">常用请求头</el-button>
+        <el-button size="small" data-testid="testcase.headers.action.bulk-edit" @click="openBulkEdit">
           <el-icon><Edit /></el-icon>
           批量编辑
         </el-button>
@@ -15,10 +15,11 @@
     </div>
     
     <div class="headers-table">
-      <el-table :data="displayHeadersList" style="width: 100%" max-height="400">
+      <el-table :data="displayHeadersList" data-testid="testcase.headers.table" style="width: 100%" max-height="400">
         <el-table-column width="50">
           <template #header>
             <el-checkbox
+              data-testid="testcase.headers.select-all"
               v-model="allSelected"
               :indeterminate="isIndeterminate"
               @change="handleSelectAll"
@@ -26,6 +27,7 @@
           </template>
           <template #default="{ row, $index }">
             <el-checkbox
+              :data-testid="`testcase.headers.row.${$index}.checkbox`"
               :model-value="row.isRun === true || row.isRun === 1"
               @change="(value) => handleCheckboxChange(row, value)"
             />
@@ -35,6 +37,7 @@
         <el-table-column label="请求头名称" width="180">
           <template #default="{ row, $index }">
             <el-autocomplete
+              :data-testid="`testcase.headers.row.${$index}.key`"
               v-model="row.key"
               :fetch-suggestions="getHeaderSuggestions"
               placeholder="请求头名称"
@@ -48,6 +51,7 @@
         <el-table-column label="请求头值" min-width="200">
           <template #default="{ row, $index }">
             <el-input
+              :data-testid="`testcase.headers.row.${$index}.value`"
               v-model="row.value"
               placeholder="请求头值"
               size="small"
@@ -58,6 +62,7 @@
         <el-table-column label="数据类型" width="120">
           <template #default="{ row, $index }">
             <el-select
+              :data-testid="`testcase.headers.row.${$index}.data-type`"
               v-model="row.dataType"
               placeholder="类型"
               size="small"
@@ -80,6 +85,7 @@
               placement="right"
             >
               <el-button
+                :data-testid="`testcase.headers.row.${$index}.required`"
                 text
                 size="small"
                 @click="toggleRequired(row)"
@@ -99,6 +105,7 @@
         <el-table-column label="描述" width="180">
           <template #default="{ row, $index }">
             <el-input
+              :data-testid="`testcase.headers.row.${$index}.description`"
               v-model="row.description"
               placeholder="请求头描述"
               size="small"
@@ -109,6 +116,7 @@
         <el-table-column label="操作" width="80">
           <template #default="{ row, $index }">
             <el-button
+              :data-testid="`testcase.headers.row.${$index}.delete`"
               size="small"
               text
               type="danger"
@@ -128,6 +136,7 @@
     <!-- 批量编辑弹窗 -->
     <BulkEditDialog
       v-model="bulkEditVisible"
+      test-id-prefix="testcase.headers.bulk-edit"
       title="批量编辑请求头"
       :data="internalHeadersList"
       @confirm="handleBulkEditConfirm"

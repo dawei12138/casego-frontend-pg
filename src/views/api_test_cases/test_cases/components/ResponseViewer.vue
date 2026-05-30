@@ -1,12 +1,13 @@
 <template>
   <div
     ref="containerRef"
+    data-testid="testcase.response.root"
     class="response-viewer"
     :class="{ 'drawer-mode': drawerMode }"
     :style="{ '--response-content-max-height': contentScrollableHeight + 'px' }"
   >
     <!-- 响应状态栏 -->
-    <div ref="statusBarRef" class="response-status-bar">
+    <div ref="statusBarRef" class="response-status-bar" data-testid="testcase.response.status">
       <div v-if="loading" class="status-loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>正在发送请求...</span>
@@ -54,6 +55,7 @@
 
       <el-tabs
         v-else-if="normalizedData"
+        data-testid="testcase.response.tabs"
         v-model="activeTab"
         type="card"
         class="response-tabs"
@@ -69,6 +71,7 @@
                   <!-- JSONPath 测试输入框 - 仅在JSON响应时显示 -->
                   <template v-if="isJsonResponse()">
                     <el-input
+                      data-testid="testcase.response.jsonpath.input"
                       v-model="jsonpathExpression"
                       placeholder="输入 JSONPath 或右键编辑器提取路径"
                       clearable
@@ -78,19 +81,19 @@
                     >
                       <template #prepend>JSONPath</template>
                     </el-input>
-                    <el-button size="small" type="primary" @click="testJsonPath" :disabled="!jsonpathExpression">
+                    <el-button size="small" type="primary" data-testid="testcase.response.jsonpath.test" @click="testJsonPath" :disabled="!jsonpathExpression">
                       测试
                     </el-button>
-                    <el-button size="small" @click="clearJsonPathResult" :disabled="jsonpathResult === null">
+                    <el-button size="small" data-testid="testcase.response.jsonpath.clear" @click="clearJsonPathResult" :disabled="jsonpathResult === null">
                       清空
                     </el-button>
                     <el-divider direction="vertical" />
                   </template>
-                  <el-button v-if="isJsonResponse()" size="small" :icon="isResponseBodyFullscreen ? Close : FullScreen" @click="toggleResponseBodyFullscreen">
+                  <el-button v-if="isJsonResponse()" size="small" data-testid="testcase.response.body.fullscreen" :icon="isResponseBodyFullscreen ? Close : FullScreen" @click="toggleResponseBodyFullscreen">
                     {{ isResponseBodyFullscreen ? '退出全屏' : '全屏' }}
                   </el-button>
-                  <el-button size="small" @click="copyResponse">复制</el-button>
-                  <el-button v-if="!normalizedData.response.isSuccess" size="small" type="danger" @click="showErrorDetail">
+                  <el-button size="small" data-testid="testcase.response.body.copy" @click="copyResponse">复制</el-button>
+                  <el-button v-if="!normalizedData.response.isSuccess" size="small" type="danger" data-testid="testcase.response.body.error-detail" @click="showErrorDetail">
                     查看错误
                   </el-button>
                 </div>
@@ -118,10 +121,11 @@
 
             <!-- HTML响应 -->
             <div v-else-if="isHtmlResponse()" class="html-response">
-              <el-tabs v-model="htmlViewMode" type="border-card">
+              <el-tabs v-model="htmlViewMode" type="border-card" data-testid="testcase.response.html.tabs">
                 <el-tab-pane label="渲染视图" name="preview">
                   <div class="html-preview-container">
                     <iframe
+                      data-testid="testcase.response.html.preview"
                       ref="htmlPreviewFrame"
                       :srcdoc="getHtmlContent()"
                       class="html-preview-frame"
@@ -131,6 +135,7 @@
                 </el-tab-pane>
                 <el-tab-pane label="源码" name="source">
                   <el-input
+                    data-testid="testcase.response.html.source"
                     :model-value="getHtmlContent()"
                     type="textarea"
                     readonly
@@ -147,7 +152,7 @@
               <div v-if="jsonpathResult !== null" class="jsonpath-result">
                 <div class="result-header">
                   <span class="result-label">测试结果:</span>
-                  <el-button size="small" @click="copyJsonPathResult">复制结果</el-button>
+                  <el-button size="small" data-testid="testcase.response.jsonpath.copy-result" @click="copyJsonPathResult">复制结果</el-button>
                 </div>
                 <div class="result-content">
                   <pre>{{ jsonpathResultFormatted }}</pre>
@@ -159,6 +164,7 @@
                 <!-- 全屏模式下的工具栏 -->
                 <div v-if="isResponseBodyFullscreen" class="monaco-toolbar fullscreen-toolbar">
                   <el-input
+                    data-testid="testcase.response.fullscreen.jsonpath.input"
                     v-model="jsonpathExpression"
                     placeholder="输入 JSONPath 或右键编辑器提取路径"
                     clearable
@@ -167,23 +173,24 @@
                   >
                     <template #prepend>JSONPath</template>
                   </el-input>
-                  <el-button type="primary" @click="testJsonPath" :disabled="!jsonpathExpression">
+                  <el-button type="primary" data-testid="testcase.response.fullscreen.jsonpath.test" @click="testJsonPath" :disabled="!jsonpathExpression">
                     测试
                   </el-button>
-                  <el-button @click="clearJsonPathResult" :disabled="jsonpathResult === null">
+                  <el-button data-testid="testcase.response.fullscreen.jsonpath.clear" @click="clearJsonPathResult" :disabled="jsonpathResult === null">
                     清空
                   </el-button>
                   <div style="flex: 1;"></div>
-                  <el-button :icon="Close" @click="toggleResponseBodyFullscreen">
+                  <el-button :icon="Close" data-testid="testcase.response.fullscreen.body.exit" @click="toggleResponseBodyFullscreen">
                     退出全屏
                   </el-button>
                 </div>
-                <div class="monaco-response-container" :ref="setResponseBodyMonacoRef"></div>
+                <div class="monaco-response-container" data-testid="testcase.response.body.monaco" :ref="setResponseBodyMonacoRef"></div>
               </div>
             </template>
 
             <!-- 其他文本响应 -->
             <el-input
+              data-testid="testcase.response.body.text"
               v-else
               :model-value="formatResponseBody(normalizedData.response.responseBody)"
               type="textarea"
@@ -197,7 +204,7 @@
         <!-- 响应头 -->
         <el-tab-pane label="响应头" name="headers">
           <el-card shadow="never">
-            <el-table :data="formatHeaders(normalizedData.response.responseHeaders)" stripe>
+            <el-table :data="formatHeaders(normalizedData.response.responseHeaders)" stripe data-testid="testcase.response.headers.table">
               <el-table-column prop="key" label="名称" width="200" />
               <el-table-column prop="value" label="值" show-overflow-tooltip />
             </el-table>
@@ -216,7 +223,7 @@
           </template>
           <el-card shadow="never">
             <template v-if="normalizedData.response.responseCookies && Object.keys(normalizedData.response.responseCookies).length > 0">
-              <el-table :data="formatResponseCookies(normalizedData.response.responseCookies)" stripe>
+              <el-table :data="formatResponseCookies(normalizedData.response.responseCookies)" stripe data-testid="testcase.response.cookies.table">
                 <el-table-column prop="name" label="Cookie名称" width="150" />
                 <el-table-column prop="value" label="值" width="200" show-overflow-tooltip />
                 <el-table-column prop="domain" label="域名" width="120" />
@@ -243,7 +250,7 @@
         
         <!-- 请求信息 -->
         <el-tab-pane label="请求信息" name="request">
-          <el-card shadow="never" class="request-info-card">
+          <el-card shadow="never" class="request-info-card" data-testid="testcase.response.request.root">
             <!-- 请求基本信息 -->
             <div class="request-basic-info">
               <div class="request-info-row">
@@ -268,7 +275,7 @@
             <el-descriptions :column="1" border>
               <el-descriptions-item label="请求头">
                 <template v-if="normalizedData.response.requestHeaders && Object.keys(normalizedData.response.requestHeaders).length > 0">
-                  <el-table :data="formatRequestHeaders(normalizedData.response.requestHeaders)" size="small" stripe>
+                  <el-table :data="formatRequestHeaders(normalizedData.response.requestHeaders)" size="small" stripe data-testid="testcase.response.request.headers.table">
                     <el-table-column prop="key" label="请求头名称" width="200" />
                     <el-table-column prop="value" label="值" show-overflow-tooltip />
                   </el-table>
@@ -282,18 +289,18 @@
                 <template v-if="isRequestBodyJson()">
                   <div class="monaco-editor-wrapper" :class="{ 'is-fullscreen': isRequestBodyFullscreen }">
                     <div class="monaco-toolbar">
-                      <el-button size="small" :icon="isRequestBodyFullscreen ? Close : FullScreen" @click="toggleRequestBodyFullscreen">
+                      <el-button size="small" data-testid="testcase.response.request.body.fullscreen" :icon="isRequestBodyFullscreen ? Close : FullScreen" @click="toggleRequestBodyFullscreen">
                         {{ isRequestBodyFullscreen ? '退出全屏' : '全屏' }}
                       </el-button>
                     </div>
-                    <div class="monaco-request-body-container" :ref="setRequestBodyMonacoRef"></div>
+                    <div class="monaco-request-body-container" data-testid="testcase.response.request.body.monaco" :ref="setRequestBodyMonacoRef"></div>
                   </div>
                 </template>
                 <pre v-else class="json-preview">{{ formatJson(normalizedData.response.requestBody) }}</pre>
               </el-descriptions-item>
               <el-descriptions-item label="请求Cookies">
                 <template v-if="normalizedData.response.requestCookies && Object.keys(normalizedData.response.requestCookies).length > 0">
-                  <el-table :data="formatRequestCookies(normalizedData.response.requestCookies)" size="small" stripe>
+                  <el-table :data="formatRequestCookies(normalizedData.response.requestCookies)" size="small" stripe data-testid="testcase.response.request.cookies.table">
                     <el-table-column prop="name" label="Cookie名称" width="150" />
                     <el-table-column prop="value" label="值" show-overflow-tooltip />
                   </el-table>
@@ -310,11 +317,12 @@
             前置脚本 <el-badge :value="normalizedData.setupResults.length" />
           </template>
           <el-card shadow="never">
-            <el-collapse v-model="setupActiveNames">
+            <el-collapse v-model="setupActiveNames" data-testid="testcase.response.setup-results">
               <el-collapse-item 
                 v-for="(result, index) in normalizedData.setupResults" 
                 :key="index"
                 :name="index"
+                :data-testid="`testcase.response.setup-results.row.${index}`"
               >
                 <template #title>
                   <div class="script-result-title">
@@ -336,6 +344,7 @@
                   <div v-if="result.log">
                     <h4>执行日志:</h4>
                     <el-input 
+                      :data-testid="`testcase.response.setup-results.row.${index}.log`"
                       :model-value="formatLog(result.log)" 
                       type="textarea" 
                       readonly 
@@ -355,11 +364,12 @@
             后置脚本 <el-badge :value="normalizedData.teardownResults.length" />
           </template>
           <el-card shadow="never">
-            <el-collapse v-model="teardownActiveNames">
+            <el-collapse v-model="teardownActiveNames" data-testid="testcase.response.teardown-results">
               <el-collapse-item 
                 v-for="(result, index) in normalizedData.teardownResults" 
                 :key="index"
                 :name="index"
+                :data-testid="`testcase.response.teardown-results.row.${index}`"
               >
                 <template #title>
                   <div class="script-result-title">
@@ -381,6 +391,7 @@
                   <div v-if="result.log">
                     <h4>执行日志:</h4>
                     <el-input 
+                      :data-testid="`testcase.response.teardown-results.row.${index}.log`"
                       :model-value="formatLog(result.log)" 
                       type="textarea" 
                       readonly 
@@ -404,14 +415,14 @@
             />
           </template>
           <el-card shadow="never">
-            <div class="assertion-summary">
+            <div class="assertion-summary" data-testid="testcase.response.assertions.summary">
               <el-tag :type="normalizedData.assersionResult.success ? 'success' : 'danger'" size="large">
                 {{ normalizedData.assersionResult.message }}
               </el-tag>
               <span class="execution-time">执行时间: {{ formatTime(normalizedData.assersionResult.executionTime) }}s</span>
             </div>
 
-            <el-table v-if="normalizedData.assersionResult.log?.results" :data="normalizedData.assersionResult.log.results" class="assertion-table">
+            <el-table v-if="normalizedData.assersionResult.log?.results" :data="normalizedData.assersionResult.log.results" class="assertion-table" data-testid="testcase.response.assertions.table">
               <el-table-column label="状态" width="80">
                 <template #default="{ row }">
                   <el-tag :type="row.success ? 'success' : 'danger'" size="small">
@@ -438,17 +449,17 @@
               <div class="card-header">
                 <span>执行日志</span>
                 <div class="header-actions">
-                  <el-button size="small" @click="copyExecutionLog">复制日志</el-button>
+                  <el-button size="small" data-testid="testcase.response.execution-log.copy" @click="copyExecutionLog">复制日志</el-button>
                 </div>
               </div>
             </template>
             <div class="monaco-editor-wrapper" :class="{ 'is-fullscreen': isExecutionLogFullscreen }">
               <div class="monaco-toolbar">
-                <el-button size="small" :icon="isExecutionLogFullscreen ? Close : FullScreen" @click="toggleExecutionLogFullscreen">
+                <el-button size="small" data-testid="testcase.response.execution-log.fullscreen" :icon="isExecutionLogFullscreen ? Close : FullScreen" @click="toggleExecutionLogFullscreen">
                   {{ isExecutionLogFullscreen ? '退出全屏' : '全屏' }}
                 </el-button>
               </div>
-              <div class="monaco-execution-log-container" :ref="setExecutionLogMonacoRef"></div>
+              <div class="monaco-execution-log-container" data-testid="testcase.response.execution-log.monaco" :ref="setExecutionLogMonacoRef"></div>
             </div>
           </el-card>
         </el-tab-pane>
@@ -457,6 +468,7 @@
     
     <!-- 错误详情对话框 -->
     <el-dialog
+      data-testid="testcase.response.error-dialog.root"
       v-model="showErrorDialog"
       title="错误详情"
       width="600px"
@@ -473,8 +485,8 @@
         <pre class="error-content">{{ normalizedData.response.errorMessage }}</pre>
       </div>
       <template #footer>
-        <el-button @click="showErrorDialog = false">关闭</el-button>
-        <el-button type="primary" @click="copyErrorMessage">复制错误信息</el-button>
+        <el-button data-testid="testcase.response.error-dialog.action.close" @click="showErrorDialog = false">关闭</el-button>
+        <el-button data-testid="testcase.response.error-dialog.action.copy" type="primary" @click="copyErrorMessage">复制错误信息</el-button>
       </template>
     </el-dialog>
 

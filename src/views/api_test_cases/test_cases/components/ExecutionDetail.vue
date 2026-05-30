@@ -1,13 +1,13 @@
 <template>
-  <div class="execution-detail">
-    <div v-if="loading" class="loading-container">
+  <div class="execution-detail" data-testid="testcase.history.detail.content">
+    <div v-if="loading" class="loading-container" data-testid="testcase.history.detail.loading">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span>加载中...</span>
     </div>
-    <div v-else-if="!executionData" class="empty-container">
+    <div v-else-if="!executionData" class="empty-container" data-testid="testcase.history.detail.empty">
       <p>没有可用的执行数据。</p>
     </div>
-    <div v-else class="detail-content">
+    <div v-else class="detail-content" data-testid="testcase.history.detail.viewer">
       <ResponseViewer
         :execution-data="executionData"
         :case-id="actualCaseId"
