@@ -494,15 +494,51 @@
                   style="display: none"
                   @change="handleAttachmentSelect"
                 />
-                <button
-                  class="thinking-pill"
-                  :class="{ active: enableThinking }"
-                  @click="enableThinking = !enableThinking"
-                  title="深度思考模式"
+                <el-popover
+                  v-if="availableThinkingLevels.length"
+                  v-model:visible="thinkingPopoverVisible"
+                  placement="top-start"
+                  :width="260"
+                  trigger="click"
+                  popper-style="padding: 12px;"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <span>深度思考</span>
-                </button>
+                  <template #reference>
+                    <button
+                      class="thinking-pill"
+                      :class="{ active: enableThinking, disabled: !availableThinkingLevels.length }"
+                      :disabled="!availableThinkingLevels.length"
+                      title="思考程度"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <span>{{ enableThinking ? `思考 ${selectedThinkingLevel}` : '思考' }}</span>
+                    </button>
+                  </template>
+                  <div class="thinking-popover">
+                    <div class="model-popover-label">思考程度</div>
+                    <div class="thinking-mode-row">
+                      <button
+                        class="thinking-toggle-option"
+                        :class="{ active: !enableThinking }"
+                        @click="enableThinking = false"
+                      >关闭</button>
+                      <button
+                        class="thinking-toggle-option"
+                        :class="{ active: enableThinking }"
+                        @click="enableThinking = true"
+                      >开启</button>
+                    </div>
+                    <div v-if="availableThinkingLevels.length" class="thinking-level-grid">
+                      <button
+                        v-for="level in availableThinkingLevels"
+                        :key="level"
+                        class="thinking-level-option"
+                        :class="{ active: selectedThinkingLevel === level }"
+                        @click="selectThinkingLevel(level)"
+                      >{{ level }}</button>
+                    </div>
+                    <div v-else class="model-popover-empty">当前模型未配置思考级别</div>
+                  </div>
+                </el-popover>
                 <button
                   class="thinking-pill web-search-pill"
                   :class="{ active: enableWebSearch }"
@@ -599,18 +635,21 @@
                   :width="340"
                   trigger="click"
                   popper-style="padding: 12px;"
+                  @show="loadProviderOptions"
                 >
                   <template #reference>
                     <button class="model-selector-pill">
                       <span class="provider-icon" :style="{ background: currentProviderInfo.color || '#6b7280' }">{{ currentProviderInfo.abbr || '?' }}</span>
-                      <span class="model-name-text">{{ selectedModel }}</span>
+                      <span class="model-name-text">{{ selectedModel || '选择模型' }}</span>
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
                   </template>
                   <div class="model-popover">
                     <div class="model-popover-section">
                       <div class="model-popover-label">提供商</div>
-                      <div class="model-popover-providers">
+                      <div v-if="providerLoading" class="model-popover-empty">加载中...</div>
+                      <div v-else-if="providerOptions.length === 0" class="model-popover-empty">暂无可用提供商</div>
+                      <div v-else class="model-popover-providers">
                         <button
                           v-for="p in providerOptions"
                           :key="p.key"
@@ -625,7 +664,8 @@
                     </div>
                     <div class="model-popover-section">
                       <div class="model-popover-label">模型</div>
-                      <div class="model-popover-models">
+                      <div v-if="modelOptions.length === 0" class="model-popover-empty">暂无模型配置</div>
+                      <div v-else class="model-popover-models">
                         <button
                           v-for="m in modelOptions"
                           :key="m"
@@ -640,16 +680,18 @@
                 <button
                   v-if="isStreaming"
                   class="input-action-btn stop-session"
+                  :class="{ stopping: isStopping }"
+                  :disabled="isStopping"
                   @click="stopSession"
-                  title="终止会话"
+                  :title="isStopping ? '正在终止...' : '终止会话'"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </button>
                 <button
                   v-if="!isStreaming"
                   class="input-action-btn send"
-                  :class="{ disabled: !inputMessage.trim() && !pendingAttachments.length }"
-                  :disabled="!inputMessage.trim() && !pendingAttachments.length"
+                  :class="{ disabled: (!inputMessage.trim() && !pendingAttachments.length) || !selectedModel }"
+                  :disabled="(!inputMessage.trim() && !pendingAttachments.length) || !selectedModel"
                   @click="sendMessage"
                   title="发送消息"
                 >
@@ -691,6 +733,7 @@ import { stopChatSession, uploadChatAttachments, fetchAttachmentBlob } from '@/a
 import { downloadWorkspaceFile } from '@/api/chat/workspace'
 import { allMcpconfig } from '@/api/mcpconfig/mcpconfig'
 import { listAllSkill } from '@/api/skills/skill'
+import { getProviderOptions } from '@/api/provider/provider_config'
 import { ElMessage } from 'element-plus'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import useUserStore from '@/store/modules/user'
@@ -698,25 +741,35 @@ import AiAvatarIcon from '@/assets/icons/svg/AI头像.png'
 
 // ===================== Constants =====================
 
-const PROVIDER_MODELS = {
-  anthropic: { label: 'Anthropic', abbr: 'A', color: '#d97757', models: ['claude-sonnet-4-5-20250929','claude-sonnet-4-6','claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'] },
-  deepseek: { label: 'DeepSeek', abbr: 'D', color: '#4d6bfe', models: ['deepseek-chat','deepseek-reasoner','deepseek-ai/DeepSeek-V3.2', 'deepseek-ai/DeepSeek-R1'] },
-  //google: { label: 'Google', abbr: 'G', color: '#4285f4', models: ['gemini-2.5-flash', 'gemini-2.5-pro'] },
-  //qwen: { label: '通义千问', abbr: '通', color: '#6236ff', models: ['qwen-max', 'qwen-plus', 'qwen-turbo'] },
-  //zhipu: { label: '智谱', abbr: '智', color: '#3d5afe', models: ['glm-4-plus', 'glm-4-flash'] },
-  //moonshot: { label: 'Moonshot', abbr: 'M', color: '#1a1a1a', models: ['moonshot-v1-8k', 'moonshot-v1-32k'] },
-  //ollama: { label: 'Ollama', abbr: 'O', color: '#0f172a', models: ['llama3', 'qwen2'] },
-  //azure_openai: { label: 'Azure OpenAI', abbr: 'Az', color: '#0078d4', models: ['gpt-4o', 'gpt-4o-mini'] },
-  openai: { label: 'OpenAI', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-xhigh','gpt-5.4-high','gpt-5.2-high','gpt-5.2','gpt-5.1-high','gpt-5.1', 'gpt-5'] },
-  openai_gpt1: { label: 'GGB', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.1', 'gpt-5'] },
-  openai_gpt2: { label: 'infiniteai', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.1', 'gpt-5'] },
-  gpt3: { label: '薄荷', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
-  gpt4: { label: 'hotaruapi', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
-  openai_gpt5: { label: 'KFC', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
-  gpt6: { label: '哈基米', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','[满血A]gemini-3-pro-preview','[福利]gemini-3-flash-preview','[福利]gemini-3-flash-preview-thinking','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
-  gpt7: { label: '玩票', abbr: 'OA', color: '#10a37f', models: ['gpt-5.4','gpt-5.4-high','gpt-5.2-codex','gpt-5.3-codex','gemini-3.1-flash-lite-preview','gemini-3-flash','gpt-5.2','gpt-5.2-high','gpt-5.1','gpt-5.1-high', 'gpt-5','gpt-5-high'] },
-  custom: { label: '自定义', abbr: 'C', color: '#6b7280', models: ['deepseek-ai/DeepSeek-V3.2'] },
-  gemini: { label: 'gemini', abbr: 'Ge', color: '#1a73e8', models: ['gemini-3-flash-preview','gemini-3-pro-preview-bs','[福利]gemini-3-flash-preview','[福利]gemini-3-flash-preview-thinking', '[满血A]gemini-3-pro-preview-thinking-512'] },
+const PROVIDER_PROTOCOL_THEME = {
+  openai: '#10a37f',
+  openai_compatible: '#6b7280',
+  deepseek: '#4d6bfe',
+  openrouter: '#7c3aed',
+  responses: '#10a37f',
+  openai_chat: '#4d6bfe',
+  claude: '#d97757',
+  gemini: '#1a73e8'
+}
+
+const normalizeProviderProtocol = (protocol) => {
+  const value = String(protocol || '').toLowerCase().replaceAll('-', '_')
+  if (value === 'responses' || value === 'openai_responses') return 'openai'
+  if (value === 'openai_chat') return 'openai_compatible'
+  if (value === 'anthropic') return 'claude'
+  if (value === 'google' || value === 'google_genai') return 'gemini'
+  return value
+}
+
+const modelSupportsThinking = (model) => {
+  const value = String(model || '').toLowerCase()
+  return (
+    value === 'gpt-5' ||
+    value.includes('thinking') ||
+    value.includes('reasoner') ||
+    /(^|[-_/])r1($|[-_/])/.test(value) ||
+    value.includes('opus')
+  )
 }
 
 // ===================== Utilities =====================
@@ -947,10 +1000,15 @@ const cacheUserAvatar = async () => {
 
 const sidebarCollapsed = ref(false)
 const workspacePanelVisible = ref(false)
-const selectedProvider = ref('openai')
-const selectedModel = ref('gpt-5.4-xhigh')
+const providerCatalog = ref([])
+const providerLoading = ref(false)
+const providerLoaded = ref(false)
+const selectedProvider = ref('')
+const selectedModel = ref('')
 const modelPopoverVisible = ref(false)
 const enableThinking = ref(false)
+const thinkingPopoverVisible = ref(false)
+const selectedThinkingLevel = ref('high')
 const enableWebSearch = ref(false)
 const toolPopoverVisible = ref(false)
 const mcpConfigList = ref([])
@@ -961,6 +1019,7 @@ const selectedSkillIds = ref([])
 const skillLoading = ref(false)
 const inputMessage = ref('')
 const isStreaming = ref(false)
+const isStopping = ref(false)
 const conversations = ref([])
 const currentConversationId = ref(null)
 const historyLoading = ref(false)
@@ -1007,6 +1066,7 @@ const handleMessagesClick = (e) => {
 }
 
 let abortController = null
+let streamAbortReason = null
 let highlightTimer = null
 
 const messagesRef = ref(null)
@@ -1015,13 +1075,45 @@ const thinkingScrollRefs = reactive({})
 
 // ===================== Computed =====================
 
+const normalizeModelArray = (models) => {
+  if (!models) return []
+  const values = Array.isArray(models)
+    ? models
+    : String(models).replace(/\r/g, '\n').replace(/,/g, '\n').split('\n')
+  return [...new Set(values.map(item => String(item).trim()).filter(Boolean))]
+}
+
+const getProviderAbbr = (item) => {
+  const label = item.providerName || item.providerKey || '?'
+  const ascii = label.match(/[A-Za-z]/g)
+  if (ascii?.length) return ascii.slice(0, 2).join('').toUpperCase()
+  return label.slice(0, 2)
+}
+
 const providerOptions = computed(() =>
-  Object.entries(PROVIDER_MODELS).map(([key, val]) => ({ key, label: val.label, abbr: val.abbr, color: val.color }))
+  providerCatalog.value.map(item => ({
+    key: item.providerKey,
+    label: item.providerName || item.providerKey,
+    abbr: getProviderAbbr(item),
+    color: PROVIDER_PROTOCOL_THEME[normalizeProviderProtocol(item.apiProtocol)] || '#6b7280',
+    apiProtocol: normalizeProviderProtocol(item.apiProtocol),
+    models: normalizeModelArray(item.models),
+    defaultModel: item.defaultModel,
+    thinkingLevels: normalizeModelArray(item.thinkingLevels)
+  }))
 )
 
-const modelOptions = computed(() => PROVIDER_MODELS[selectedProvider.value]?.models || [])
+const currentProviderInfo = computed(() =>
+  providerOptions.value.find(item => item.key === selectedProvider.value) || {}
+)
 
-const currentProviderInfo = computed(() => PROVIDER_MODELS[selectedProvider.value] || {})
+const modelOptions = computed(() => currentProviderInfo.value.models || [])
+
+const selectedModelSupportsThinking = computed(() => modelSupportsThinking(selectedModel.value))
+
+const availableThinkingLevels = computed(() =>
+  selectedModelSupportsThinking.value ? (currentProviderInfo.value.thinkingLevels || []) : []
+)
 
 const selectProvider = (key) => {
   selectedProvider.value = key
@@ -1030,6 +1122,12 @@ const selectProvider = (key) => {
 const selectModel = (model) => {
   selectedModel.value = model
   modelPopoverVisible.value = false
+  syncThinkingSelection()
+}
+
+const selectThinkingLevel = (level) => {
+  selectedThinkingLevel.value = level
+  enableThinking.value = true
 }
 
 const currentConversation = computed(() =>
@@ -1056,6 +1154,61 @@ const hasActiveAskUser = computed(() => {
     m => m.role === 'ask_user' && !m.processed
   )
 })
+
+function syncThinkingSelection() {
+  const levels = availableThinkingLevels.value
+  if (!levels.length) {
+    enableThinking.value = false
+    return
+  }
+  if (!levels.includes(selectedThinkingLevel.value)) {
+    selectedThinkingLevel.value = levels.includes('high') ? 'high' : levels[0]
+  }
+}
+
+const ensureProviderSelection = () => {
+  if (!providerOptions.value.length) {
+    selectedProvider.value = ''
+    selectedModel.value = ''
+    enableThinking.value = false
+    return
+  }
+
+  const currentProvider = providerOptions.value.find(item => item.key === selectedProvider.value)
+  const provider = currentProvider || providerOptions.value[0]
+  selectedProvider.value = provider.key
+
+  const models = provider.models || []
+  if (models.length && !models.includes(selectedModel.value)) {
+    selectedModel.value = provider.defaultModel && models.includes(provider.defaultModel)
+      ? provider.defaultModel
+      : models[0]
+  }
+  if (!models.length) {
+    selectedModel.value = ''
+  }
+
+  syncThinkingSelection()
+}
+
+const loadProviderOptions = async (force = false) => {
+  if (providerLoading.value) return
+  if (providerLoaded.value && !force) return
+  providerLoading.value = true
+  try {
+    const res = await getProviderOptions()
+    providerCatalog.value = Array.isArray(res.data) ? res.data : []
+    providerLoaded.value = true
+    ensureProviderSelection()
+  } catch (error) {
+    console.error('加载模型提供商配置失败:', error)
+    providerCatalog.value = []
+    ensureProviderSelection()
+    ElMessage.error('加载模型配置失败')
+  } finally {
+    providerLoading.value = false
+  }
+}
 
 // ===================== Todo Float Panel Computed =====================
 
@@ -1086,8 +1239,20 @@ const currentInProgressTodo = computed(() => {
   return text.length > 20 ? text.slice(0, 18) + '...' : text
 })
 
+const getConversationSortTime = (conv) => {
+  const value = conv.updatedAt || conv.updateTime || conv.createTime
+  const time = value ? new Date(value).getTime() : 0
+  return Number.isFinite(time) ? time : 0
+}
+
+const touchConversation = (conv) => {
+  if (!conv) return
+  conv.updateTime = new Date().toISOString()
+  conv.updatedAt = Date.now()
+}
+
 const sortedConversations = computed(() =>
-  [...conversations.value].sort((a, b) => new Date(b.createTime) - new Date(a.createTime))
+  [...conversations.value].sort((a, b) => getConversationSortTime(b) - getConversationSortTime(a))
 )
 
 // ===================== Methods =====================
@@ -1099,6 +1264,7 @@ const createNewChat = () => {
     title: '',
     messages: [],
     createTime: new Date().toISOString(),
+    updateTime: new Date().toISOString(),
     isNew: true
   }
   conversations.value.unshift(conv)
@@ -1449,6 +1615,36 @@ const normalizeAssistantMessage = (msg) => {
   if (typeof msg._copied !== 'boolean') msg._copied = false
 }
 
+const finishAssistantMessage = (assistantMsg) => {
+  if (!assistantMsg) return
+  normalizeAssistantMessage(assistantMsg)
+  assistantMsg.loading = false
+  assistantMsg.toolCalls.forEach(toolCall => {
+    toolCall.loading = false
+  })
+}
+
+const markAssistantStopped = (assistantMsg, label = '会话已终止') => {
+  if (!assistantMsg) return
+  finishAssistantMessage(assistantMsg)
+  const marker = `> ${label}`
+  if (!assistantMsg.content) {
+    assistantMsg.content = `(${label})`
+  } else if (!assistantMsg.content.includes(marker)) {
+    assistantMsg.content += `\n\n${marker}`
+  }
+}
+
+const getLastLoadingAssistantMessage = (threadId = currentConversationId.value) => {
+  const conv = conversations.value.find(c => c.threadId === threadId)
+  if (!conv) return null
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    const msg = conv.messages[i]
+    if (msg.role === 'assistant' && msg.loading) return msg
+  }
+  return null
+}
+
 const ensureReconnectAssistantMessage = (conv) => {
   let assistantMsg = null
   for (let i = conv.messages.length - 1; i >= 0; i--) {
@@ -1479,8 +1675,10 @@ const reconnectChatStream = async (threadId) => {
   if (!conv || conv.isNew) return false
 
   isStreaming.value = true
+  isStopping.value = false
   const streamController = new AbortController()
   abortController = streamController
+  streamAbortReason = null
 
   let assistantMsg = null
   let connected = false
@@ -1529,8 +1727,8 @@ const reconnectChatStream = async (threadId) => {
 
         const data = trimmed.slice(trimmed.indexOf(':') + 1).trim()
         if (data === '[DONE]') {
-          assistantMsg.loading = false
-          break
+          finishAssistantMessage(assistantMsg)
+          return true
         }
 
         try {
@@ -1645,7 +1843,9 @@ const reconnectChatStream = async (threadId) => {
   } finally {
     if (abortController === streamController) {
       isStreaming.value = false
+      isStopping.value = false
       abortController = null
+      streamAbortReason = null
     }
     highlightCode()
   }
@@ -1838,6 +2038,13 @@ const sendMessage = async () => {
   const text = inputMessage.value.trim()
   const hasAttachments = pendingAttachments.value.length > 0
   if ((!text && !hasAttachments) || isStreaming.value) return
+  if (!providerLoaded.value) {
+    await loadProviderOptions(true)
+  }
+  if (!selectedProvider.value || !selectedModel.value) {
+    ElMessage.warning('请先配置可用的模型提供商')
+    return
+  }
 
   if (!currentConversationId.value) createNewChat()
 
@@ -1876,13 +2083,15 @@ const sendMessage = async () => {
 
   // Assistant placeholder
   conv.messages.push(createAssistantPlaceholder())
-  conv.updatedAt = Date.now()
+  touchConversation(conv)
   scrollToBottom(true)
 
   const assistantMsg = conv.messages[conv.messages.length - 1]
   isStreaming.value = true
+  isStopping.value = false
   const streamController = new AbortController()
   abortController = streamController
+  streamAbortReason = null
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -1899,6 +2108,7 @@ const sendMessage = async () => {
         message: text,
         attachments: attachments,
         enableThinking: enableThinking.value,
+        thinkingLevel: enableThinking.value ? selectedThinkingLevel.value : null,
         enableWebSearch: enableWebSearch.value,
         ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
         ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
@@ -1927,8 +2137,8 @@ const sendMessage = async () => {
 
         const data = trimmed.slice(trimmed.indexOf(':') + 1).trim()
         if (data === '[DONE]') {
-          assistantMsg.loading = false
-          break
+          finishAssistantMessage(assistantMsg)
+          return
         }
 
         try {
@@ -2035,60 +2245,52 @@ const sendMessage = async () => {
       }
     }
 
-    assistantMsg.loading = false
+    finishAssistantMessage(assistantMsg)
   } catch (error) {
     if (error.name === 'AbortError') {
-      if (!assistantMsg.content) assistantMsg.content = '(已停止生成)'
+      if (streamAbortReason === 'user-stop') {
+        markAssistantStopped(assistantMsg)
+      }
     } else {
       console.error('Chat SSE error:', error)
       assistantMsg.content += `\n\n> 请求失败: ${error.message}`
+      finishAssistantMessage(assistantMsg)
     }
-    assistantMsg.loading = false
   } finally {
     if (abortController === streamController) {
       isStreaming.value = false
+      isStopping.value = false
       abortController = null
+      streamAbortReason = null
     }
     highlightCode()
   }
 }
 
-const stopStreaming = () => {
+const stopStreaming = (reason = 'detach') => {
+  streamAbortReason = reason
   if (abortController) abortController.abort()
 }
 
 // 终止会话
 const stopSession = async () => {
-  if (!currentConversationId.value) return
+  const threadId = currentConversationId.value
+  if (!threadId || isStopping.value) return
+
+  isStopping.value = true
+  const assistantMsg = getLastLoadingAssistantMessage(threadId)
+  markAssistantStopped(assistantMsg)
+  stopStreaming('user-stop')
+  isStreaming.value = false
 
   try {
-    await stopChatSession(currentConversationId.value)
-
-    // 停止当前流式请求
-    if (abortController) {
-      abortController.abort()
-    }
-
-    isStreaming.value = false
-
-    // 在消息中添加终止提示
-    const conv = currentConversation.value
-    if (conv && conv.messages.length > 0) {
-      const lastMsg = conv.messages[conv.messages.length - 1]
-      if (lastMsg.role === 'assistant' && lastMsg.loading) {
-        lastMsg.loading = false
-        if (!lastMsg.content) {
-          lastMsg.content = '(会话已终止)'
-        } else {
-          lastMsg.content += '\n\n> 会话已终止'
-        }
-      }
-    }
-
-    ElMessage.success('会话已终止')
+    const res = await stopChatSession(threadId)
+    ElMessage.success(res?.data?.stopped === false ? '会话已结束' : '会话已终止')
   } catch (error) {
     console.error('终止会话失败:', error)
-    ElMessage.error('终止会话失败')
+    ElMessage.warning('本地已停止，后端终止请求失败')
+  } finally {
+    isStopping.value = false
   }
 }
 
@@ -2150,11 +2352,14 @@ const submitApproval = async (interruptMsg) => {
 
   const assistantMsg = createAssistantPlaceholder()
   conv.messages.push(assistantMsg)
+  touchConversation(conv)
   scrollToBottom(true)
 
   isStreaming.value = true
+  isStopping.value = false
   const streamController = new AbortController()
   abortController = streamController
+  streamAbortReason = null
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -2192,8 +2397,8 @@ const submitApproval = async (interruptMsg) => {
 
         const data = trimmed.slice(trimmed.indexOf(':') + 1).trim()
         if (data === '[DONE]') {
-          assistantMsg.loading = false
-          break
+          finishAssistantMessage(assistantMsg)
+          return
         }
 
         try {
@@ -2296,17 +2501,21 @@ const submitApproval = async (interruptMsg) => {
     assistantMsg.loading = false
   } catch (error) {
     if (error.name === 'AbortError') {
-      if (!assistantMsg.content) assistantMsg.content = '(已停止生成)'
+      if (streamAbortReason === 'user-stop') {
+        markAssistantStopped(assistantMsg)
+      }
     } else {
       console.error('Resume SSE error:', error)
       assistantMsg.content += `\n\n> 请求失败: ${error.message}`
+      finishAssistantMessage(assistantMsg)
     }
-    assistantMsg.loading = false
   } finally {
     interruptMsg.submitting = false
     if (abortController === streamController) {
       isStreaming.value = false
+      isStopping.value = false
       abortController = null
+      streamAbortReason = null
     }
     highlightCode()
   }
@@ -2380,17 +2589,28 @@ const submitAnswer = async (askUserMsg) => {
     askUserMsg.submitting = false
     return
   }
+  if (!providerLoaded.value) {
+    await loadProviderOptions(true)
+  }
+  if (!selectedProvider.value || !selectedModel.value) {
+    askUserMsg.submitting = false
+    ElMessage.warning('请先配置可用的模型提供商')
+    return
+  }
 
   // 标记为已处理
   askUserMsg.processed = true
 
   const assistantMsg = createAssistantPlaceholder()
   conv.messages.push(assistantMsg)
+  touchConversation(conv)
   scrollToBottom(true)
 
   isStreaming.value = true
+  isStopping.value = false
   const streamController = new AbortController()
   abortController = streamController
+  streamAbortReason = null
 
   try {
     const baseURL = import.meta.env.VITE_APP_BASE_API
@@ -2406,6 +2626,7 @@ const submitAnswer = async (askUserMsg) => {
         threadId: askUserMsg.threadId,
         answers,
         enableThinking: enableThinking.value,
+        thinkingLevel: enableThinking.value ? selectedThinkingLevel.value : null,
         enableWebSearch: enableWebSearch.value,
         ...(selectedMcpConfigIds.value.length > 0 ? { mcpConfigIds: selectedMcpConfigIds.value } : {}),
         ...(selectedSkillIds.value.length > 0 ? { skillIds: selectedSkillIds.value } : {})
@@ -2434,8 +2655,8 @@ const submitAnswer = async (askUserMsg) => {
 
         const data = trimmed.slice(trimmed.indexOf(':') + 1).trim()
         if (data === '[DONE]') {
-          assistantMsg.loading = false
-          break
+          finishAssistantMessage(assistantMsg)
+          return
         }
 
         try {
@@ -2539,17 +2760,21 @@ const submitAnswer = async (askUserMsg) => {
     assistantMsg.loading = false
   } catch (error) {
     if (error.name === 'AbortError') {
-      if (!assistantMsg.content) assistantMsg.content = '(已停止生成)'
+      if (streamAbortReason === 'user-stop') {
+        markAssistantStopped(assistantMsg)
+      }
     } else {
       console.error('Answer SSE error:', error)
       assistantMsg.content += `\n\n> 请求失败: ${error.message}`
+      finishAssistantMessage(assistantMsg)
     }
-    assistantMsg.loading = false
   } finally {
     askUserMsg.submitting = false
     if (abortController === streamController) {
       isStreaming.value = false
+      isStopping.value = false
       abortController = null
+      streamAbortReason = null
     }
     highlightCode()
   }
@@ -2658,10 +2883,11 @@ const loadConversations = async () => {
         threadId: item.threadId,
         title: item.title,
         createTime: item.createTime,
+        updateTime: item.updateTime,
         messages: [],
         isNew: false
       }))
-      const firstThreadId = res.rows[0].threadId
+      const firstThreadId = sortedConversations.value[0]?.threadId || res.rows[0].threadId
       currentConversationId.value = firstThreadId
       await ensureConversationActiveState(firstThreadId)
       nextTick(() => {
@@ -2680,21 +2906,34 @@ const loadConversations = async () => {
 // ===================== Watchers =====================
 
 watch(selectedProvider, (val) => {
-  const models = PROVIDER_MODELS[val]?.models || []
+  const provider = providerOptions.value.find(item => item.key === val)
+  const models = provider?.models || []
   if (models.length > 0 && !models.includes(selectedModel.value)) {
-    selectedModel.value = models[0]
+    selectedModel.value = provider.defaultModel && models.includes(provider.defaultModel)
+      ? provider.defaultModel
+      : models[0]
   }
+  if (!models.length) {
+    selectedModel.value = ''
+  }
+
+  syncThinkingSelection()
+})
+
+watch(selectedModel, () => {
+  syncThinkingSelection()
 })
 
 // ===================== Lifecycle =====================
 
 onMounted(() => {
   cacheUserAvatar()
+  loadProviderOptions()
   loadConversations()
 })
 
 onUnmounted(() => {
-  if (abortController) abortController.abort()
+  stopStreaming()
   clearTimeout(highlightTimer)
   // 释放头像 blob URL
   if (cachedUserAvatar.value) {

@@ -63,13 +63,12 @@
           >
             <header class="card-top">
               <div class="provider-identity">
-                <div class="provider-avatar" :class="{ 'has-image': item.iconUrl }">
-                  <img v-if="item.iconUrl" :src="item.iconUrl" :alt="item.providerName" />
-                  <span v-else class="avatar-letter">{{ getProviderInitial(item) }}</span>
+                <div class="provider-avatar" :class="getProtocolClass(item.apiProtocol)">
+                  <span class="avatar-letter">{{ getProtocolIcon(item.apiProtocol) }}</span>
                 </div>
                 <div class="provider-heading">
                   <h3 class="provider-name">{{ item.providerName || '未命名提供商' }}</h3>
-                  <span class="provider-key">{{ item.providerKey || '-' }}</span>
+                  <span class="provider-key">{{ getProtocolLabel(item.apiProtocol) }}</span>
                 </div>
               </div>
               <span class="status-badge" :class="getStatusMeta(item.status).className">
@@ -85,18 +84,29 @@
               </span>
             </div>
 
+            <div class="model-meta-row">
+              <span class="protocol-chip">{{ getProtocolLabel(item.apiProtocol) }}</span>
+              <span class="model-count">{{ getModels(item).length }} 个模型</span>
+            </div>
+
             <dl class="provider-details">
               <div class="info-item">
                 <dt>API 密钥</dt>
                 <dd class="masked">{{ maskApiKey(item.apiKey) }}</dd>
               </div>
               <div class="info-item">
-                <dt>超时 / 重试</dt>
-                <dd>{{ item.timeout || 60 }}s / {{ item.maxRetries ?? 3 }} 次</dd>
+                <dt>默认模型</dt>
+                <dd :title="item.defaultModel || getModels(item)[0] || '未配置'">
+                  {{ item.defaultModel || getModels(item)[0] || '未配置' }}
+                </dd>
               </div>
               <div class="info-item">
-                <dt>更新时间</dt>
-                <dd>{{ formatTime(item.updateTime) }}</dd>
+                <dt>思考程度</dt>
+                <dd>{{ getThinkingSummary(item.thinkingLevels) }}</dd>
+              </div>
+              <div class="info-item">
+                <dt>超时 / 重试</dt>
+                <dd>{{ item.timeout || 60 }}s / {{ item.maxRetries ?? 3 }} 次</dd>
               </div>
             </dl>
 
@@ -166,59 +176,142 @@
           <div class="form-section-head">
             <span class="section-index">01</span>
             <div>
-              <h4 class="section-title">基本信息</h4>
-              <p>供应商的唯一标识和展示信息。</p>
+              <h4 class="section-title">基础配置</h4>
+              <p>先完成连接所需的协议、根地址和密钥，系统会自动生成内部标识。</p>
             </div>
           </div>
-          <el-row :gutter="16">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="提供商标识" prop="providerKey">
-                <el-input
-                  v-model="form.providerKey"
-                  placeholder="openai"
-                  :disabled="!!form.providerId"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="显示名称" prop="providerName">
-                <el-input v-model="form.providerName" placeholder="OpenAI" />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="16">
-              <el-form-item label="图标 URL" prop="iconUrl">
-                <el-input v-model="form.iconUrl" placeholder="https://example.com/icon.svg" />
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="8">
-              <el-form-item label="状态" prop="status">
-                <el-switch
-                  v-model="form.status"
-                  active-value="0"
-                  inactive-value="1"
-                  active-text="启用"
-                  inactive-text="禁用"
-                  class="status-switch"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
+
+          <el-form-item label="接口协议" prop="apiProtocol">
+            <el-select v-model="form.apiProtocol" class="full-select" @change="handleProtocolChange">
+              <el-option
+                v-for="item in apiProtocolOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              >
+                <div class="protocol-option">
+                  <span>{{ item.label }}</span>
+                  <small>{{ item.description }}</small>
+                </div>
+              </el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Base URL" prop="baseUrl">
+            <el-input v-model="form.baseUrl" :placeholder="baseUrlPlaceholder" @blur="normalizeFormBaseUrl" />
+            <p class="field-hint">只填写根地址，不要包含 /v1/chat/completions 或 /v1/responses。</p>
+          </el-form-item>
+
+          <el-form-item label="API Key" prop="apiKey">
+            <el-input v-model="form.apiKey" type="password" show-password placeholder="请输入 API Key" />
+          </el-form-item>
+
+          <div class="compact-config-row">
+            <el-form-item label="显示名称" prop="providerName">
+              <el-input v-model="form.providerName" :placeholder="currentProtocolOption.label" />
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+              <el-switch
+                v-model="form.status"
+                active-value="1"
+                inactive-value="0"
+                active-text="启用"
+                inactive-text="禁用"
+                class="status-switch"
+              />
+            </el-form-item>
+          </div>
         </section>
 
         <section class="form-section">
           <div class="form-section-head">
             <span class="section-index">02</span>
             <div>
-              <h4 class="section-title">认证配置</h4>
-              <p>用于请求供应商 API 的凭据。</p>
+              <h4 class="section-title">模型配置</h4>
+              <p>模型列表决定对话页可选项，思考程度会按模型能力自动启用。</p>
             </div>
           </div>
-          <el-form-item label="API 密钥" prop="apiKey">
-            <el-input v-model="form.apiKey" type="password" show-password placeholder="请输入 API Key" />
+
+          <el-row :gutter="16">
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="默认模型" prop="defaultModel">
+                <el-select
+                  v-model="form.defaultModel"
+                  class="full-select"
+                  filterable
+                  allow-create
+                  default-first-option
+                  placeholder="选择默认模型"
+                >
+                  <el-option
+                    v-for="model in getFormModels()"
+                    :key="model"
+                    :label="model"
+                    :value="model"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="快速填充模型">
+                <el-button class="full-width-btn" plain @click="applyModelPreset(form.apiProtocol)">
+                  填充 {{ currentProtocolOption.shortLabel }} 推荐模型
+                </el-button>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <div class="preset-row">
+            <span>推荐模型</span>
+            <el-button
+              v-for="model in currentModelPresets"
+              :key="model"
+              size="small"
+              plain
+              @click="addPresetModel(model)"
+            >
+              {{ model }}
+            </el-button>
+          </div>
+
+          <el-form-item label="模型型号" prop="models">
+            <el-select
+              v-model="form.models"
+              class="model-select"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="输入模型型号后回车"
+              @change="handleModelsChange"
+            >
+              <el-option
+                v-for="model in getFormModels()"
+                :key="model"
+                :label="model"
+                :value="model"
+              />
+            </el-select>
           </el-form-item>
 
-          <el-form-item label="API Secret" prop="apiSecret">
-            <el-input v-model="form.apiSecret" type="password" show-password placeholder="可选" />
+          <el-form-item label="思考程度" prop="thinkingLevels">
+            <el-checkbox-group
+              v-if="formThinkingSupported"
+              v-model="form.thinkingLevels"
+              class="thinking-levels"
+            >
+              <el-checkbox-button
+                v-for="item in thinkingLevelOptions"
+                :key="item.value"
+                :label="item.value"
+              >
+                <span>{{ item.label }}</span>
+                <small>{{ item.description }}</small>
+              </el-checkbox-button>
+            </el-checkbox-group>
+            <p v-else class="field-hint">当前模型未检测到 thinking / reasoner / r1 / opus 等推理能力，思考程度会在对话页自动隐藏。</p>
           </el-form-item>
         </section>
 
@@ -226,14 +319,10 @@
           <div class="form-section-head">
             <span class="section-index">03</span>
             <div>
-              <h4 class="section-title">连接配置</h4>
-              <p>代理地址、超时和失败重试策略。</p>
+              <h4 class="section-title">请求配置</h4>
+              <p>控制请求等待时间和失败后的重试次数。</p>
             </div>
           </div>
-          <el-form-item label="Base URL" prop="baseUrl">
-            <el-input v-model="form.baseUrl" placeholder="https://api.example.com/v1" />
-          </el-form-item>
-
           <el-row :gutter="16">
             <el-col :xs="24" :sm="12">
               <el-form-item label="超时时间 (秒)" prop="timeout">
@@ -253,7 +342,7 @@
             <span class="section-index">04</span>
             <div>
               <h4 class="section-title">高级配置</h4>
-              <p>按需覆盖请求头和内部备注。</p>
+              <p>仅在兼容平台需要自定义鉴权头或请求体参数时填写。</p>
             </div>
           </div>
           <el-form-item label="额外请求头 (JSON)" prop="extraHeaders">
@@ -265,8 +354,14 @@
               placeholder='{"X-Custom-Header": "value"}'
             />
           </el-form-item>
-          <el-form-item label="备注" prop="remark">
-            <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="可选" />
+          <el-form-item label="额外请求参数 (JSON)" prop="extraParams">
+            <el-input
+              v-model="form.extraParams"
+              class="json-textarea"
+              type="textarea"
+              :rows="4"
+              placeholder='{"reasoning": {"effort": "high"}}'
+            />
           </el-form-item>
         </section>
       </el-form>
@@ -294,7 +389,83 @@ import {
   updateProvider_config
 } from '@/api/provider/provider_config'
 
-// State
+const apiProtocolOptions = [
+  {
+    value: 'openai',
+    label: 'OpenAI',
+    shortLabel: 'OpenAI',
+    icon: 'OA',
+    description: '官方接口，自动选择 Responses 或 Chat Completions',
+    defaultBaseUrl: 'https://api.openai.com',
+    defaultModel: 'gpt-5',
+    models: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-thinking', 'gpt-5-thinking-mini']
+  },
+  {
+    value: 'claude',
+    label: 'Claude',
+    shortLabel: 'Claude',
+    icon: 'C',
+    description: 'Anthropic Messages API',
+    defaultBaseUrl: 'https://api.anthropic.com',
+    defaultModel: 'claude-sonnet-4.5',
+    models: ['claude-sonnet-4.5', 'claude-opus-4.1', 'claude-opus-4.8', 'claude-haiku-4']
+  },
+  {
+    value: 'gemini',
+    label: 'Gemini',
+    shortLabel: 'Gemini',
+    icon: 'G',
+    description: 'Google Gemini API',
+    defaultBaseUrl: 'https://generativelanguage.googleapis.com',
+    defaultModel: 'gemini-2.5-pro',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-pro-thinking']
+  },
+  {
+    value: 'deepseek',
+    label: 'DeepSeek',
+    shortLabel: 'DeepSeek',
+    icon: 'D',
+    description: 'DeepSeek 官方 OpenAI 兼容接口',
+    defaultBaseUrl: 'https://api.deepseek.com',
+    defaultModel: 'deepseek-chat',
+    models: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v3', 'deepseek-r1']
+  },
+  {
+    value: 'openrouter',
+    label: 'OpenRouter',
+    shortLabel: 'OpenRouter',
+    icon: 'OR',
+    description: 'OpenRouter 聚合接口',
+    defaultBaseUrl: 'https://openrouter.ai/api',
+    defaultModel: 'openai/gpt-5',
+    models: ['openai/gpt-5', 'anthropic/claude-opus-4.8', 'google/gemini-2.5-pro', 'deepseek/deepseek-r1']
+  },
+  {
+    value: 'openai_compatible',
+    label: 'OpenAI-Compatible',
+    shortLabel: '兼容',
+    icon: '{}',
+    description: 'One API、New API、Azure OpenAI、硅基流动、各类中转站',
+    defaultBaseUrl: '',
+    defaultModel: 'gpt-5',
+    models: ['gpt-5', 'gpt-5-mini', 'deepseek-chat', 'deepseek-reasoner']
+  }
+]
+
+const protocolMap = Object.fromEntries(apiProtocolOptions.map(item => [item.value, item]))
+const protocolDefaultBaseUrls = apiProtocolOptions.map(item => item.defaultBaseUrl).filter(Boolean)
+
+const thinkingLevelOptions = [
+  { value: 'low', label: 'Low', description: '最快响应' },
+  { value: 'medium', label: 'Medium', description: '平衡模式' },
+  { value: 'high', label: 'High', description: '深度推理' },
+  { value: 'xhigh', label: 'XHigh', description: '强推理' },
+  { value: 'max', label: 'Max', description: '最大预算' }
+]
+
+const thinkingLabelMap = Object.fromEntries(thinkingLevelOptions.map(item => [item.value, item.label]))
+const defaultThinkingLevels = thinkingLevelOptions.map(item => item.value)
+
 const loading = ref(false)
 const submitLoading = ref(false)
 const open = ref(false)
@@ -305,6 +476,26 @@ const testingIds = ref([])
 const provider_configList = ref([])
 const formRef = ref()
 
+const endpointPathPattern = /\/(v\d+\/)?(chat\/completions|responses)\/?$/i
+
+function validateBaseUrl(_rule, value, callback) {
+  if (!value) {
+    callback(new Error('请输入 Base URL'))
+    return
+  }
+  try {
+    const url = new URL(value)
+    if (endpointPathPattern.test(url.pathname)) {
+      callback(new Error('只填写根地址，不要包含接口路径'))
+      return
+    }
+  } catch {
+    callback(new Error('请输入有效的 URL'))
+    return
+  }
+  callback()
+}
+
 const data = reactive({
   form: {},
   queryParams: {
@@ -312,73 +503,152 @@ const data = reactive({
     pageSize: 12
   },
   rules: {
-    providerKey: [
-      { required: true, message: '请输入提供商标识', trigger: 'blur' }
+    apiProtocol: [
+      { required: true, message: '请选择接口协议', trigger: 'change' }
     ],
-    providerName: [
-      { required: true, message: '请输入提供商名称', trigger: 'blur' }
+    baseUrl: [
+      { required: true, validator: validateBaseUrl, trigger: 'blur' }
     ],
     apiKey: [
-      { required: true, message: '请输入 API 密钥', trigger: 'blur' }
+      { required: true, message: '请输入 API Key', trigger: 'blur' }
+    ],
+    defaultModel: [
+      { required: true, message: '请选择默认模型', trigger: 'change' }
+    ],
+    models: [
+      { type: 'array', required: true, min: 1, message: '请配置至少一个模型型号', trigger: 'change' }
     ]
   }
 })
 
 const { queryParams, form, rules } = toRefs(data)
 
-// Computed
+const currentProtocolOption = computed(() => protocolMap[form.value.apiProtocol] || protocolMap.openai)
+const currentModelPresets = computed(() => currentProtocolOption.value.models || [])
+const baseUrlPlaceholder = computed(() => currentProtocolOption.value.defaultBaseUrl || 'https://api.example.com')
+const formThinkingSupported = computed(() => getFormModels().some(isThinkingCapableModel))
+
 const filteredList = computed(() => {
   if (!searchKeyword.value) return provider_configList.value
   const keyword = searchKeyword.value.toLowerCase()
   return provider_configList.value.filter(item =>
     item.providerName?.toLowerCase().includes(keyword) ||
-    item.providerKey?.toLowerCase().includes(keyword)
+    getProtocolLabel(item.apiProtocol).toLowerCase().includes(keyword) ||
+    getModels(item).some(model => model.toLowerCase().includes(keyword))
   )
 })
 
-const enabledCount = computed(() => provider_configList.value.filter(item => item.status === '0').length)
+const enabledCount = computed(() => provider_configList.value.filter(item => item.status === '1').length)
 const disabledCount = computed(() => provider_configList.value.length - enabledCount.value)
 const visibleCountLabel = computed(() => (searchKeyword.value ? `${filteredList.value.length} / ${total.value}` : total.value))
 
-// Methods
-function maskApiKey(key) {
-  if (!key) return '未配置'
-  if (key.length <= 8) return '••••••••'
-  return key.substring(0, 4) + '••••••••' + key.substring(key.length - 4)
+function normalizeApiProtocol(protocol, providerKey = '') {
+  const value = String(protocol || '').toLowerCase().replaceAll('-', '_')
+  if (value === 'responses' || value === 'openai_responses') return 'openai'
+  if (value === 'openai_chat') return providerKey === 'openai' ? 'openai' : 'openai_compatible'
+  if (value === 'anthropic') return 'claude'
+  if (value === 'google' || value === 'google_genai') return 'gemini'
+  return protocolMap[value] ? value : 'openai_compatible'
 }
 
-function getProviderInitial(item) {
-  const label = item.providerName || item.providerKey || 'L'
-  return label.charAt(0).toUpperCase()
+function normalizeBaseUrl(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    let path = url.pathname.replace(/\/+$/, '')
+    path = path.replace(/\/v\d+\/chat\/completions$/i, '')
+    path = path.replace(/\/chat\/completions$/i, '')
+    path = path.replace(/\/v\d+\/responses$/i, '')
+    path = path.replace(/\/responses$/i, '')
+    if (url.host === 'api.openai.com' && path === '/v1') path = ''
+    url.pathname = path || '/'
+    url.search = ''
+    url.hash = ''
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return raw.replace(/\/+$/, '')
+  }
+}
+
+function normalizeFormBaseUrl() {
+  form.value.baseUrl = normalizeBaseUrl(form.value.baseUrl)
+}
+
+function normalizeModelArray(models) {
+  if (!models) return []
+  const values = Array.isArray(models)
+    ? models
+    : String(models).replace(/\r/g, '\n').replace(/,/g, '\n').split('\n')
+  return [...new Set(values.map(item => String(item).trim()).filter(Boolean))]
+}
+
+function isThinkingCapableModel(model) {
+  const value = String(model || '').toLowerCase()
+  return (
+    value === 'gpt-5' ||
+    value.includes('thinking') ||
+    value.includes('reasoner') ||
+    /(^|[-_/])r1($|[-_/])/.test(value) ||
+    value.includes('opus')
+  )
+}
+
+function syncThinkingLevelsForModels() {
+  if (formThinkingSupported.value) {
+    if (!normalizeModelArray(form.value.thinkingLevels).length) {
+      form.value.thinkingLevels = [...defaultThinkingLevels]
+    }
+  } else {
+    form.value.thinkingLevels = []
+  }
+}
+
+function maskApiKey(key) {
+  if (!key) return '未配置'
+  if (key.length <= 8) return '********'
+  return key.substring(0, 4) + '********' + key.substring(key.length - 4)
 }
 
 function getStatusMeta(status) {
-  return status === '0'
+  return status === '1'
     ? { label: '启用', className: 'is-enabled' }
     : { label: '禁用', className: 'is-disabled' }
 }
 
 function getEndpointText(baseUrl) {
   if (!baseUrl) return '默认端点'
-
   try {
-    return new URL(baseUrl).host
+    const url = new URL(baseUrl)
+    return `${url.host}${url.pathname === '/' ? '' : url.pathname}`
   } catch {
     return baseUrl
   }
 }
 
-function formatTime(time) {
-  if (!time) return '-'
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now - date
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days} 天前`
-  return date.toLocaleDateString('zh-CN')
+function getModels(item) {
+  return normalizeModelArray(item?.models)
+}
+
+function getFormModels() {
+  return normalizeModelArray(form.value.models)
+}
+
+function getProtocolLabel(protocol) {
+  return (protocolMap[normalizeApiProtocol(protocol)] || protocolMap.openai_compatible).label
+}
+
+function getProtocolIcon(protocol) {
+  return (protocolMap[normalizeApiProtocol(protocol)] || protocolMap.openai_compatible).icon
+}
+
+function getProtocolClass(protocol) {
+  return `is-${normalizeApiProtocol(protocol).replace('_', '-')}`
+}
+
+function getThinkingSummary(levels) {
+  const normalized = normalizeModelArray(levels)
+  return normalized.length ? normalized.map(level => thinkingLabelMap[level] || level).join(' / ') : '未启用'
 }
 
 function handleSearch() {
@@ -390,8 +660,8 @@ async function getList() {
   loading.value = true
   try {
     const response = await listProvider_config(queryParams.value)
-    provider_configList.value = response.rows
-    total.value = response.total
+    provider_configList.value = response.rows || []
+    total.value = response.total || 0
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {
@@ -399,25 +669,111 @@ async function getList() {
   }
 }
 
-function reset() {
-  form.value = {
+function createDefaultForm(protocol = 'openai') {
+  const option = protocolMap[protocol] || protocolMap.openai
+  return {
     providerId: null,
     providerKey: null,
-    providerName: null,
+    providerName: option.label,
     apiKey: null,
     apiSecret: null,
-    baseUrl: null,
+    baseUrl: option.defaultBaseUrl || null,
     apiVersion: null,
     timeout: 60,
     maxRetries: 3,
     extraHeaders: null,
+    extraParams: null,
+    apiProtocol: option.value,
+    models: [...option.models],
+    defaultModel: option.defaultModel,
+    thinkingLevels: [...defaultThinkingLevels],
     iconUrl: null,
-    status: '0',
+    status: '1',
     remark: null,
     description: null,
     sortNo: 0
   }
+}
+
+function reset() {
+  form.value = createDefaultForm()
   formRef.value?.resetFields()
+}
+
+function normalizeFormData(data = {}) {
+  const apiProtocol = normalizeApiProtocol(data.apiProtocol, data.providerKey)
+  const option = protocolMap[apiProtocol] || protocolMap.openai_compatible
+  const models = normalizeModelArray(data.models).length ? normalizeModelArray(data.models) : [...option.models]
+  const defaultModel = data.defaultModel || option.defaultModel || models[0] || null
+  const thinkingLevels = normalizeModelArray(data.thinkingLevels)
+  return {
+    ...data,
+    apiProtocol,
+    baseUrl: normalizeBaseUrl(data.baseUrl || option.defaultBaseUrl || ''),
+    providerName: data.providerName || option.label,
+    models,
+    defaultModel,
+    thinkingLevels: thinkingLevels.length ? thinkingLevels : (models.some(isThinkingCapableModel) ? [...defaultThinkingLevels] : [])
+  }
+}
+
+function handleProtocolChange(protocol) {
+  const nextProtocol = normalizeApiProtocol(protocol)
+  const option = protocolMap[nextProtocol] || protocolMap.openai_compatible
+  const currentBase = normalizeBaseUrl(form.value.baseUrl)
+  if (!currentBase || protocolDefaultBaseUrls.includes(currentBase)) {
+    form.value.baseUrl = option.defaultBaseUrl || ''
+  }
+  if (!form.value.providerName || apiProtocolOptions.some(item => item.label === form.value.providerName)) {
+    form.value.providerName = option.label
+  }
+  form.value.apiProtocol = option.value
+  form.value.models = [...option.models]
+  form.value.defaultModel = option.defaultModel || option.models[0] || null
+  form.value.thinkingLevels = option.models.some(isThinkingCapableModel) ? [...defaultThinkingLevels] : []
+  formRef.value?.clearValidate?.(['apiProtocol', 'baseUrl', 'models', 'defaultModel'])
+}
+
+function handleModelsChange(models) {
+  form.value.models = normalizeModelArray(models)
+  if (!form.value.models.includes(form.value.defaultModel)) {
+    form.value.defaultModel = form.value.models[0] || null
+  }
+  syncThinkingLevelsForModels()
+}
+
+function addPresetModel(model) {
+  form.value.models = normalizeModelArray([...getFormModels(), model])
+  if (!form.value.defaultModel) form.value.defaultModel = model
+  syncThinkingLevelsForModels()
+  formRef.value?.clearValidate?.('models')
+}
+
+function applyModelPreset(protocol = form.value.apiProtocol) {
+  const option = protocolMap[normalizeApiProtocol(protocol)] || protocolMap.openai_compatible
+  form.value.apiProtocol = option.value
+  form.value.models = normalizeModelArray([...getFormModels(), ...option.models])
+  if (!form.value.defaultModel || !form.value.models.includes(form.value.defaultModel)) {
+    form.value.defaultModel = option.defaultModel || form.value.models[0] || null
+  }
+  syncThinkingLevelsForModels()
+  formRef.value?.clearValidate?.(['models', 'defaultModel'])
+}
+
+function parseJsonField(value, label) {
+  if (!value || (typeof value === 'string' && !value.trim())) return null
+  if (typeof value === 'object' && !Array.isArray(value)) return value
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      ElMessage.warning(`${label} 必须是 JSON 对象`)
+      return false
+    }
+    return parsed
+  } catch {
+    ElMessage.warning(`${label} JSON 格式不正确`)
+    return false
+  }
 }
 
 function cancel() {
@@ -436,10 +792,12 @@ async function handleUpdate(row) {
   const providerId = row.providerId
   try {
     const response = await getProvider_config(providerId)
-    form.value = response.data
-    // extraHeaders: object → string for textarea
+    form.value = normalizeFormData(response.data)
     if (form.value.extraHeaders && typeof form.value.extraHeaders === 'object') {
       form.value.extraHeaders = JSON.stringify(form.value.extraHeaders, null, 2)
+    }
+    if (form.value.extraParams && typeof form.value.extraParams === 'object') {
+      form.value.extraParams = JSON.stringify(form.value.extraParams, null, 2)
     }
     open.value = true
     title.value = '编辑 LLM 提供商'
@@ -452,6 +810,7 @@ async function submitForm() {
   if (!formRef.value) return
 
   try {
+    normalizeFormBaseUrl()
     await formRef.value.validate()
   } catch {
     return
@@ -462,16 +821,30 @@ async function submitForm() {
 
   try {
     const submitData = { ...form.value }
-    // extraHeaders: string → object
-    if (typeof submitData.extraHeaders === 'string' && submitData.extraHeaders.trim()) {
-      try {
-        submitData.extraHeaders = JSON.parse(submitData.extraHeaders)
-      } catch {
-        ElMessage.warning('额外请求头 JSON 格式不正确')
-        submitLoading.value = false
-        return
-      }
+    submitData.apiProtocol = normalizeApiProtocol(submitData.apiProtocol, submitData.providerKey)
+    submitData.baseUrl = normalizeBaseUrl(submitData.baseUrl)
+    submitData.providerName = submitData.providerName || getProtocolLabel(submitData.apiProtocol)
+    submitData.models = normalizeModelArray(submitData.models)
+    submitData.thinkingLevels = formThinkingSupported.value ? normalizeModelArray(submitData.thinkingLevels) : []
+
+    if (!submitData.defaultModel && submitData.models.length) {
+      submitData.defaultModel = submitData.models[0]
     }
+    if (submitData.defaultModel && !submitData.models.includes(submitData.defaultModel)) {
+      submitData.models.unshift(submitData.defaultModel)
+    }
+
+    const headers = parseJsonField(submitData.extraHeaders, '额外请求头')
+    if (headers === false) return
+    submitData.extraHeaders = headers
+
+    const params = parseJsonField(submitData.extraParams, '额外请求参数')
+    if (params === false) return
+    submitData.extraParams = params
+
+    delete submitData.apiSecret
+    delete submitData.apiVersion
+    delete submitData.iconUrl
 
     if (submitData.providerId) {
       await updateProvider_config(submitData)
@@ -500,7 +873,7 @@ async function handleDelete(row) {
         type: 'warning'
       }
     )
-    
+
     await delProvider_config(row.providerId)
     ElMessage.success('删除成功')
     getList()
@@ -513,17 +886,15 @@ async function handleDelete(row) {
 
 async function handleTestConnection(row) {
   if (testingIds.value.includes(row.providerId)) return
-  
+
   testingIds.value.push(row.providerId)
-  
-  // Simulate connection test (replace with actual API call)
+
   setTimeout(() => {
     testingIds.value = testingIds.value.filter(id => id !== row.providerId)
     ElMessage.success('连接测试成功')
   }, 1500)
 }
 
-// Init
 getList()
 </script>
 
@@ -818,14 +1189,44 @@ getList()
   background: var(--provider-canvas);
 }
 
-.provider-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.provider-avatar.is-openai {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.provider-avatar.is-claude {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.provider-avatar.is-gemini {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.provider-avatar.is-deepseek {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.provider-avatar.is-openrouter {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.provider-avatar.is-openai-compatible {
+  border-color: var(--provider-hairline-strong);
+  background: var(--provider-canvas-soft-2);
+  color: var(--provider-body);
 }
 
 .avatar-letter {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 24px;
 }
@@ -918,6 +1319,37 @@ getList()
   line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.model-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -6px 0 16px;
+}
+
+.protocol-chip,
+.model-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.protocol-chip {
+  border: 1px solid var(--provider-primary-border);
+  background: var(--provider-primary-soft);
+  color: var(--provider-primary);
+  font-weight: 500;
+}
+
+.model-count {
+  border: 1px solid var(--provider-hairline);
+  background: var(--provider-canvas);
+  color: var(--provider-muted);
 }
 
 .provider-details {
@@ -1129,6 +1561,109 @@ getList()
   width: 100%;
 }
 
+.protocol-option {
+  display: grid;
+  gap: 2px;
+}
+
+.protocol-option span {
+  color: var(--provider-ink);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.protocol-option small {
+  color: var(--provider-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  color: var(--provider-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.compact-config-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px;
+  gap: 16px;
+}
+
+.full-select,
+.model-select {
+  width: 100%;
+}
+
+.full-width-btn {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 6px;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--provider-hairline);
+  border-radius: 8px;
+  background: var(--provider-canvas-soft-2);
+}
+
+.preset-row span {
+  color: var(--provider-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.preset-row :deep(.el-button) {
+  margin-left: 0;
+  border-radius: 999px;
+}
+
+.thinking-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.thinking-levels :deep(.el-checkbox-button__inner) {
+  display: grid;
+  min-width: 98px;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--provider-hairline);
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.thinking-levels :deep(.el-checkbox-button__inner span) {
+  font-weight: 600;
+}
+
+.thinking-levels :deep(.el-checkbox-button__inner small) {
+  color: var(--provider-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+}
+
+.thinking-levels :deep(.el-checkbox-button.is-checked .el-checkbox-button__inner) {
+  border-color: var(--provider-primary);
+  background: var(--provider-primary);
+  color: #fff;
+}
+
+.thinking-levels :deep(.el-checkbox-button.is-checked .el-checkbox-button__inner small) {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .status-switch {
   min-height: 40px;
 }
@@ -1239,6 +1774,15 @@ getList()
   .form-section-head {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .compact-config-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .thinking-levels :deep(.el-checkbox-button__inner) {
+    min-width: 0;
   }
 }
 </style>

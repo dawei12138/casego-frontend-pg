@@ -9,6 +9,14 @@ export function listProvider_config(query) {
   })
 }
 
+// 查询对话可用的LLM提供商和模型选项
+export function getProviderOptions() {
+  return request({
+    url: '/provider/provider_config/options',
+    method: 'get'
+  })
+}
+
 // 查询LLM提供商配置详细
 export function getProvider_config(providerId) {
   return request({
