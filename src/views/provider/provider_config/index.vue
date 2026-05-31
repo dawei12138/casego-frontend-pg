@@ -102,7 +102,7 @@
               </div>
               <div class="info-item">
                 <dt>思考程度</dt>
-                <dd>{{ getThinkingSummary(item.thinkingLevels) }}</dd>
+                <dd>{{ getThinkingSummary(item.thinkingLevels, item.apiProtocol) }}</dd>
               </div>
               <div class="info-item">
                 <dt>超时 / 重试</dt>
@@ -127,6 +127,15 @@
                 @click.stop="handleUpdate(item)"
                 v-hasPermi="['provider:provider_config:edit']"
               >编辑</el-button>
+              <el-button
+                link
+                type="primary"
+                icon="CopyDocument"
+                size="small"
+                @click.stop="handleCopy(item)"
+                :loading="copyingIds.includes(item.providerId)"
+                v-hasPermi="['provider:provider_config:add']"
+              >复制</el-button>
               <el-button
                 link
                 type="danger"
@@ -311,7 +320,7 @@
                 <small>{{ item.description }}</small>
               </el-checkbox-button>
             </el-checkbox-group>
-            <p v-else class="field-hint">当前模型未检测到 thinking / reasoner / r1 / opus 等推理能力，思考程度会在对话页自动隐藏。</p>
+            <p v-else class="field-hint">请先选择接口协议。</p>
           </el-form-item>
         </section>
 
@@ -388,14 +397,31 @@ import {
   addProvider_config,
   updateProvider_config
 } from '@/api/provider/provider_config'
+import {
+  buildProviderCopyPayload,
+  defaultThinkingLevels,
+  protocolSupportsThinking as supportsProtocolThinking,
+  resolveThinkingLevels,
+  thinkingLevelOptions
+} from './providerForm'
 
 const apiProtocolOptions = [
   {
-    value: 'openai',
-    label: 'OpenAI',
-    shortLabel: 'OpenAI',
-    icon: 'OA',
-    description: '官方接口，自动选择 Responses 或 Chat Completions',
+    value: 'openai_chat',
+    label: 'OpenAI Chat',
+    shortLabel: 'OpenAI Chat',
+    icon: 'OC',
+    description: '官方 Chat Completions 接口',
+    defaultBaseUrl: 'https://api.openai.com',
+    defaultModel: 'gpt-4.1',
+    models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini']
+  },
+  {
+    value: 'responses',
+    label: 'OpenAI Responses',
+    shortLabel: 'Responses',
+    icon: 'RS',
+    description: '官方 Responses 接口，支持 reasoning 参数',
     defaultBaseUrl: 'https://api.openai.com',
     defaultModel: 'gpt-5',
     models: ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'gpt-5-thinking', 'gpt-5-thinking-mini']
@@ -455,16 +481,7 @@ const apiProtocolOptions = [
 const protocolMap = Object.fromEntries(apiProtocolOptions.map(item => [item.value, item]))
 const protocolDefaultBaseUrls = apiProtocolOptions.map(item => item.defaultBaseUrl).filter(Boolean)
 
-const thinkingLevelOptions = [
-  { value: 'low', label: 'Low', description: '最快响应' },
-  { value: 'medium', label: 'Medium', description: '平衡模式' },
-  { value: 'high', label: 'High', description: '深度推理' },
-  { value: 'xhigh', label: 'XHigh', description: '强推理' },
-  { value: 'max', label: 'Max', description: '最大预算' }
-]
-
 const thinkingLabelMap = Object.fromEntries(thinkingLevelOptions.map(item => [item.value, item.label]))
-const defaultThinkingLevels = thinkingLevelOptions.map(item => item.value)
 
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -473,10 +490,11 @@ const title = ref('')
 const total = ref(0)
 const searchKeyword = ref('')
 const testingIds = ref([])
+const copyingIds = ref([])
 const provider_configList = ref([])
 const formRef = ref()
 
-const endpointPathPattern = /\/(v\d+\/)?(chat\/completions|responses)\/?$/i
+const endpointPathPattern = /\/(v\d+\/)?(chat\/completions|responses|messages)\/?$/i
 
 function validateBaseUrl(_rule, value, callback) {
   if (!value) {
@@ -523,10 +541,10 @@ const data = reactive({
 
 const { queryParams, form, rules } = toRefs(data)
 
-const currentProtocolOption = computed(() => protocolMap[form.value.apiProtocol] || protocolMap.openai)
+const currentProtocolOption = computed(() => protocolMap[form.value.apiProtocol] || protocolMap.openai_chat)
 const currentModelPresets = computed(() => currentProtocolOption.value.models || [])
 const baseUrlPlaceholder = computed(() => currentProtocolOption.value.defaultBaseUrl || 'https://api.example.com')
-const formThinkingSupported = computed(() => getFormModels().some(isThinkingCapableModel))
+const formThinkingSupported = computed(() => supportsProtocolThinking(form.value.apiProtocol))
 
 const filteredList = computed(() => {
   if (!searchKeyword.value) return provider_configList.value
@@ -544,8 +562,9 @@ const visibleCountLabel = computed(() => (searchKeyword.value ? `${filteredList.
 
 function normalizeApiProtocol(protocol, providerKey = '') {
   const value = String(protocol || '').toLowerCase().replaceAll('-', '_')
-  if (value === 'responses' || value === 'openai_responses') return 'openai'
-  if (value === 'openai_chat') return providerKey === 'openai' ? 'openai' : 'openai_compatible'
+  if (value === 'openai' || value === 'chat' || value === 'chat_completions') return 'openai_chat'
+  if (value === 'responses' || value === 'openai_responses') return 'responses'
+  if (value === 'openai_chat') return 'openai_chat'
   if (value === 'anthropic') return 'claude'
   if (value === 'google' || value === 'google_genai') return 'gemini'
   return protocolMap[value] ? value : 'openai_compatible'
@@ -561,6 +580,8 @@ function normalizeBaseUrl(value) {
     path = path.replace(/\/chat\/completions$/i, '')
     path = path.replace(/\/v\d+\/responses$/i, '')
     path = path.replace(/\/responses$/i, '')
+    path = path.replace(/\/v\d+\/messages$/i, '')
+    path = path.replace(/\/messages$/i, '')
     if (url.host === 'api.openai.com' && path === '/v1') path = ''
     url.pathname = path || '/'
     url.search = ''
@@ -583,22 +604,9 @@ function normalizeModelArray(models) {
   return [...new Set(values.map(item => String(item).trim()).filter(Boolean))]
 }
 
-function isThinkingCapableModel(model) {
-  const value = String(model || '').toLowerCase()
-  return (
-    value === 'gpt-5' ||
-    value.includes('thinking') ||
-    value.includes('reasoner') ||
-    /(^|[-_/])r1($|[-_/])/.test(value) ||
-    value.includes('opus')
-  )
-}
-
 function syncThinkingLevelsForModels() {
   if (formThinkingSupported.value) {
-    if (!normalizeModelArray(form.value.thinkingLevels).length) {
-      form.value.thinkingLevels = [...defaultThinkingLevels]
-    }
+    form.value.thinkingLevels = resolveThinkingLevels(form.value.thinkingLevels)
   } else {
     form.value.thinkingLevels = []
   }
@@ -646,8 +654,10 @@ function getProtocolClass(protocol) {
   return `is-${normalizeApiProtocol(protocol).replace('_', '-')}`
 }
 
-function getThinkingSummary(levels) {
-  const normalized = normalizeModelArray(levels)
+function getThinkingSummary(levels, protocol) {
+  const normalized = supportsProtocolThinking(normalizeApiProtocol(protocol))
+    ? resolveThinkingLevels(levels)
+    : normalizeModelArray(levels)
   return normalized.length ? normalized.map(level => thinkingLabelMap[level] || level).join(' / ') : '未启用'
 }
 
@@ -669,8 +679,8 @@ async function getList() {
   }
 }
 
-function createDefaultForm(protocol = 'openai') {
-  const option = protocolMap[protocol] || protocolMap.openai
+function createDefaultForm(protocol = 'openai_chat') {
+  const option = protocolMap[protocol] || protocolMap.openai_chat
   return {
     providerId: null,
     providerKey: null,
@@ -713,7 +723,7 @@ function normalizeFormData(data = {}) {
     providerName: data.providerName || option.label,
     models,
     defaultModel,
-    thinkingLevels: thinkingLevels.length ? thinkingLevels : (models.some(isThinkingCapableModel) ? [...defaultThinkingLevels] : [])
+    thinkingLevels: supportsProtocolThinking(apiProtocol) ? resolveThinkingLevels(thinkingLevels) : []
   }
 }
 
@@ -730,7 +740,7 @@ function handleProtocolChange(protocol) {
   form.value.apiProtocol = option.value
   form.value.models = [...option.models]
   form.value.defaultModel = option.defaultModel || option.models[0] || null
-  form.value.thinkingLevels = option.models.some(isThinkingCapableModel) ? [...defaultThinkingLevels] : []
+  form.value.thinkingLevels = [...defaultThinkingLevels]
   formRef.value?.clearValidate?.(['apiProtocol', 'baseUrl', 'models', 'defaultModel'])
 }
 
@@ -806,6 +816,29 @@ async function handleUpdate(row) {
   }
 }
 
+async function handleCopy(row) {
+  if (copyingIds.value.includes(row.providerId)) return
+  copyingIds.value.push(row.providerId)
+
+  try {
+    const response = await getProvider_config(row.providerId)
+    const source = normalizeFormData(response.data)
+    const copyData = buildProviderCopyPayload(source, {
+      normalizeApiProtocol,
+      normalizeBaseUrl,
+      normalizeModelArray
+    })
+
+    await addProvider_config(copyData)
+    ElMessage.success(`已复制为 ${copyData.providerName}`)
+    getList()
+  } catch (error) {
+    ElMessage.error('复制失败')
+  } finally {
+    copyingIds.value = copyingIds.value.filter(id => id !== row.providerId)
+  }
+}
+
 async function submitForm() {
   if (!formRef.value) return
 
@@ -825,7 +858,9 @@ async function submitForm() {
     submitData.baseUrl = normalizeBaseUrl(submitData.baseUrl)
     submitData.providerName = submitData.providerName || getProtocolLabel(submitData.apiProtocol)
     submitData.models = normalizeModelArray(submitData.models)
-    submitData.thinkingLevels = formThinkingSupported.value ? normalizeModelArray(submitData.thinkingLevels) : []
+    submitData.thinkingLevels = supportsProtocolThinking(submitData.apiProtocol)
+      ? resolveThinkingLevels(submitData.thinkingLevels)
+      : []
 
     if (!submitData.defaultModel && submitData.models.length) {
       submitData.defaultModel = submitData.models[0]
@@ -1189,7 +1224,14 @@ getList()
   background: var(--provider-canvas);
 }
 
-.provider-avatar.is-openai {
+.provider-avatar.is-openai,
+.provider-avatar.is-openai-chat {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.provider-avatar.is-responses {
   border-color: #bbf7d0;
   background: #f0fdf4;
   color: #047857;

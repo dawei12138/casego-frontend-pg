@@ -495,7 +495,7 @@
                   @change="handleAttachmentSelect"
                 />
                 <el-popover
-                  v-if="availableThinkingLevels.length"
+                  v-if="thinkingControlVisible"
                   v-model:visible="thinkingPopoverVisible"
                   placement="top-start"
                   :width="260"
@@ -506,8 +506,7 @@
                     <button
                       class="thinking-pill"
                       :class="{ active: enableThinking, disabled: !availableThinkingLevels.length }"
-                      :disabled="!availableThinkingLevels.length"
-                      title="思考程度"
+                      :title="availableThinkingLevels.length ? '思考程度' : '当前模型未配置思考级别'"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                       <span>{{ enableThinking ? `思考 ${selectedThinkingLevel}` : '思考' }}</span>
@@ -519,12 +518,12 @@
                       <button
                         class="thinking-toggle-option"
                         :class="{ active: !enableThinking }"
-                        @click="enableThinking = false"
+                        @click="setThinkingEnabled(false)"
                       >关闭</button>
                       <button
                         class="thinking-toggle-option"
                         :class="{ active: enableThinking }"
-                        @click="enableThinking = true"
+                        @click="setThinkingEnabled(true)"
                       >开启</button>
                     </div>
                     <div v-if="availableThinkingLevels.length" class="thinking-level-grid">
@@ -738,24 +737,30 @@ import { ElMessage } from 'element-plus'
 import WorkspacePanel from './components/WorkspacePanel.vue'
 import useUserStore from '@/store/modules/user'
 import AiAvatarIcon from '@/assets/icons/svg/AI头像.png'
+import {
+  CHAT_MODEL_SELECTION_CACHE_KEY,
+  DEFAULT_THINKING_LEVEL,
+  resolveModelSelection,
+  shouldShowThinkingControl,
+} from './modelSelection'
 
 // ===================== Constants =====================
 
 const PROVIDER_PROTOCOL_THEME = {
-  openai: '#10a37f',
+  openai: '#4d6bfe',
+  openai_chat: '#4d6bfe',
+  responses: '#10a37f',
   openai_compatible: '#6b7280',
   deepseek: '#4d6bfe',
   openrouter: '#7c3aed',
-  responses: '#10a37f',
-  openai_chat: '#4d6bfe',
   claude: '#d97757',
   gemini: '#1a73e8'
 }
 
 const normalizeProviderProtocol = (protocol) => {
   const value = String(protocol || '').toLowerCase().replaceAll('-', '_')
-  if (value === 'responses' || value === 'openai_responses') return 'openai'
-  if (value === 'openai_chat') return 'openai_compatible'
+  if (value === 'responses' || value === 'openai_responses') return 'responses'
+  if (value === 'openai' || value === 'openai_chat' || value === 'chat' || value === 'chat_completions') return 'openai_chat'
   if (value === 'anthropic') return 'claude'
   if (value === 'google' || value === 'google_genai') return 'gemini'
   return value
@@ -1008,7 +1013,7 @@ const selectedModel = ref('')
 const modelPopoverVisible = ref(false)
 const enableThinking = ref(false)
 const thinkingPopoverVisible = ref(false)
-const selectedThinkingLevel = ref('high')
+const selectedThinkingLevel = ref(DEFAULT_THINKING_LEVEL)
 const enableWebSearch = ref(false)
 const toolPopoverVisible = ref(false)
 const mcpConfigList = ref([])
@@ -1112,7 +1117,14 @@ const modelOptions = computed(() => currentProviderInfo.value.models || [])
 const selectedModelSupportsThinking = computed(() => modelSupportsThinking(selectedModel.value))
 
 const availableThinkingLevels = computed(() =>
-  selectedModelSupportsThinking.value ? (currentProviderInfo.value.thinkingLevels || []) : []
+  currentProviderInfo.value.thinkingLevels || []
+)
+
+const thinkingControlVisible = computed(() =>
+  shouldShowThinkingControl({
+    provider: currentProviderInfo.value,
+    model: selectedModel.value
+  })
 )
 
 const selectProvider = (key) => {
@@ -1123,11 +1135,18 @@ const selectModel = (model) => {
   selectedModel.value = model
   modelPopoverVisible.value = false
   syncThinkingSelection()
+  saveModelSelectionPreference()
 }
 
 const selectThinkingLevel = (level) => {
   selectedThinkingLevel.value = level
   enableThinking.value = true
+  saveModelSelectionPreference()
+}
+
+const setThinkingEnabled = (enabled) => {
+  enableThinking.value = Boolean(enabled && availableThinkingLevels.value.length)
+  saveModelSelectionPreference()
 }
 
 const currentConversation = computed(() =>
@@ -1162,33 +1181,59 @@ function syncThinkingSelection() {
     return
   }
   if (!levels.includes(selectedThinkingLevel.value)) {
-    selectedThinkingLevel.value = levels.includes('high') ? 'high' : levels[0]
+    selectedThinkingLevel.value = levels.includes(DEFAULT_THINKING_LEVEL) ? DEFAULT_THINKING_LEVEL : levels[0]
   }
 }
 
-const ensureProviderSelection = () => {
-  if (!providerOptions.value.length) {
-    selectedProvider.value = ''
-    selectedModel.value = ''
-    enableThinking.value = false
-    return
-  }
+const getCurrentModelSelection = () => ({
+  providerKey: selectedProvider.value,
+  model: selectedModel.value,
+  enableThinking: enableThinking.value,
+  thinkingLevel: selectedThinkingLevel.value
+})
 
-  const currentProvider = providerOptions.value.find(item => item.key === selectedProvider.value)
-  const provider = currentProvider || providerOptions.value[0]
-  selectedProvider.value = provider.key
-
-  const models = provider.models || []
-  if (models.length && !models.includes(selectedModel.value)) {
-    selectedModel.value = provider.defaultModel && models.includes(provider.defaultModel)
-      ? provider.defaultModel
-      : models[0]
+const readModelSelectionPreference = () => {
+  try {
+    const raw = localStorage.getItem(CHAT_MODEL_SELECTION_CACHE_KEY)
+    if (!raw) return null
+    const value = JSON.parse(raw)
+    if (!value || typeof value !== 'object') return null
+    return {
+      providerKey: typeof value.providerKey === 'string' ? value.providerKey : '',
+      model: typeof value.model === 'string' ? value.model : '',
+      enableThinking: Boolean(value.enableThinking),
+      thinkingLevel: typeof value.thinkingLevel === 'string' ? value.thinkingLevel : DEFAULT_THINKING_LEVEL
+    }
+  } catch {
+    return null
   }
-  if (!models.length) {
-    selectedModel.value = ''
-  }
+}
 
-  syncThinkingSelection()
+const saveModelSelectionPreference = () => {
+  if (!selectedProvider.value || !selectedModel.value) return
+  try {
+    localStorage.setItem(CHAT_MODEL_SELECTION_CACHE_KEY, JSON.stringify(getCurrentModelSelection()))
+  } catch {
+    // localStorage 可能被禁用，忽略缓存失败即可
+  }
+}
+
+const applyModelSelection = (selection) => {
+  selectedProvider.value = selection.providerKey
+  selectedModel.value = selection.model
+  selectedThinkingLevel.value = selection.thinkingLevel || DEFAULT_THINKING_LEVEL
+  enableThinking.value = selection.enableThinking
+}
+
+const ensureProviderSelection = (preference = getCurrentModelSelection()) => {
+  const selection = resolveModelSelection({
+    providers: providerOptions.value,
+    preference: preference || {},
+    current: getCurrentModelSelection(),
+    modelSupportsThinking,
+  })
+  applyModelSelection(selection)
+  saveModelSelectionPreference()
 }
 
 const loadProviderOptions = async (force = false) => {
@@ -1199,7 +1244,7 @@ const loadProviderOptions = async (force = false) => {
     const res = await getProviderOptions()
     providerCatalog.value = Array.isArray(res.data) ? res.data : []
     providerLoaded.value = true
-    ensureProviderSelection()
+    ensureProviderSelection(readModelSelectionPreference())
   } catch (error) {
     console.error('加载模型提供商配置失败:', error)
     providerCatalog.value = []
@@ -2906,22 +2951,13 @@ const loadConversations = async () => {
 // ===================== Watchers =====================
 
 watch(selectedProvider, (val) => {
-  const provider = providerOptions.value.find(item => item.key === val)
-  const models = provider?.models || []
-  if (models.length > 0 && !models.includes(selectedModel.value)) {
-    selectedModel.value = provider.defaultModel && models.includes(provider.defaultModel)
-      ? provider.defaultModel
-      : models[0]
-  }
-  if (!models.length) {
-    selectedModel.value = ''
-  }
-
-  syncThinkingSelection()
+  if (!val && !providerOptions.value.length) return
+  ensureProviderSelection(getCurrentModelSelection())
 })
 
 watch(selectedModel, () => {
   syncThinkingSelection()
+  saveModelSelectionPreference()
 })
 
 // ===================== Lifecycle =====================
